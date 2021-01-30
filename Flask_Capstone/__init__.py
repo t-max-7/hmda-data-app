@@ -13,4 +13,4 @@ print(__name__.split(".")[0])
 
 import Flask_Capstone.ad_hoc
 import Flask_Capstone.main_module
-import Flask_Capstone.views
+import Flask_Capstone.secure_views

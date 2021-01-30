@@ -1,3 +1,4 @@
+
 """
 Routes and views for the flask application.
 """
@@ -164,7 +165,7 @@ def logout():
     return make_secure_response(redirect(url_for("login")))
 
 def make_secure_response(template):
-    response = make_respone(template)
+    response = make_response(template)
     response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'SAMEORIGIN'
