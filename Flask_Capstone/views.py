@@ -3,7 +3,7 @@ Routes and views for the flask application.
 """
 
 from datetime import datetime
-from flask import redirect, render_template, render_template_string, request, session, url_for
+from flask import make_response, redirect, render_template, render_template_string, request, session, url_for
 from Flask_Capstone import app
 
 #!
@@ -36,24 +36,24 @@ def login():
     if request.method == "POST":
         return login_user()
     else:
-        return render_template(
+        return make_secure_response(render_template(
             'login.html',
             title='Login',
             year=datetime.now().year,
             message=""
-        )
+        ))
 
 def login_user():
     username = request.form.get("username")
 
     user_password_info = password_dict.get(username)
     if (user_password_info is None):
-        return render_template(
+        return make_secure_response(render_template(
             'login.html',
             title='Login',
             year=datetime.now().year,
             message="wrong username"
-        )
+        ))
     
     salt = user_password_info["salt"]
     hash = user_password_info["hash"]
@@ -62,42 +62,42 @@ def login_user():
     
     if compare_hash(pyargon2.hash(password, salt), hash):
         session["username"] = username
-        return redirect(url_for("home"))
+        return make_secure_response(redirect(url_for("home")))
     else:
-        return render_template(
+        return make_secure_response(render_template(
             'login.html',
             title='Login',
             year=datetime.now().year,
             message="wrong password"
-        )
+        ))
     
 
 @app.route('/home')
 def home():
     """Renders the home page."""
     if "username" in session:
-        return render_template(
+        return make_secure_response(render_template(
             'index.html',
             year=datetime.now().year,
-        )
+        ))
     else:
-        return redirect(url_for("login"))
+        return make_secure_response(redirect(url_for("login")))
 
 @app.route('/query', methods=["GET", "POST"])
 def query():
     if "username" in session:
         if request.method == "POST":
-            return do_query()
+            return make_secure_response(do_query())
         else:
-            return render_template(
+            return make_secure_response(render_template(
                 'query.html',
                 title='Query',
                 year=datetime.now().year,
                 message='Your query page.',
                 table_info=table_info
-            )
+            ))
     else:
-        return redirect(url_for("login"))
+        return make_secure_response(redirect(url_for("login")))
 
 def do_query():
     """Renders the contact page."""
@@ -120,9 +120,9 @@ def do_query():
             sql_query = ad_hoc.SqlUpdateQuery(table_columns, set_expression, where_condition)
             result = "<h3> update sucessful </h3>" + ad_hoc.query_data_frame(sql_query, original_data_frame, abs_path_to_data_pickle).to_html(justify="center", classes="table")
 
-        return render_template_string(result)
+        return make_secure_response(render_template_string(result))
     else:
-        return redirect(url_for("login"))
+        return make_secure_response(redirect(url_for("login")))
 
 @app.route("/plot", methods=["POST"])
 def make_plot():
@@ -137,9 +137,9 @@ def make_plot():
         df = ad_hoc.query_data_frame(sql_query, original_data_frame, abs_path_to_data_pickle)
         plot = main_module.make_plot(df, x_axis, y_axis)
     
-        return plot
+        return make_secure_response(plot)
     else:
-        return dedirect(url_for("login"))
+        return make_secure_response(redirect(url_for("login")))
 
 
 @app.route('/plots')
@@ -148,17 +148,25 @@ def plots():
         plots = ""
         for p in main_module.main(original_data_frame):
             plots = plots + p
-        return render_template(
+        return make_secure_response(render_template(
             'plots.html',
             title='Plots',
             year=datetime.now().year,
             message='Description',
             plots=plots
-        )
+        ))
     else:
-        return redirect(url_for("login"))
+        return make_secure_response(redirect(url_for("login")))
 
 @app.route("/logout")
 def logout():
     session.pop("username", None)
-    return redirect(url_for("login"))
+    return make_secure_response(redirect(url_for("login")))
+
+def make_secure_response(template):
+    response = make_respone(template)
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    return response
