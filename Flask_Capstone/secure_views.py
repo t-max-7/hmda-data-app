@@ -19,10 +19,11 @@ from . import ad_hoc
 #!
 # read pickle containing data
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
-abs_path_to_data_pickle = os.path.join(PROJECT_ROOT, "static/data/csv_data - Copy.pkl").replace("\\", "/")
+file_name = "2019_state_AZ_actions_taken_1_loan_types_1.pkl"
+abs_path_to_data_pickle = os.path.join(PROJECT_ROOT, f"static/data/{file_name}").replace("\\", "/")
 original_data_frame = pd.read_pickle(abs_path_to_data_pickle)
 name_of_original_data_frame_variable = "original_data_frame"
-table_info = ad_hoc.TableInfo("2019_state_AZ_actions_taken_1_loan_types_1.csv", original_data_frame.columns.format())
+table_info = ad_hoc.TableInfo(file_name, original_data_frame.columns.format())
 
 #read pickle containing passwords
 abs_path_to_password_dict_pickle = os.path.join(PROJECT_ROOT, "static/data/password_dict.pkl").replace("\\", "/")
@@ -111,16 +112,23 @@ def do_query():
             limit = int(request.form.get("limit"))        
             where_condition = ad_hoc.get_where_condition(request, name_of_original_data_frame_variable)
             sql_query =  ad_hoc.SqlSelectQuery(table_columns, where_condition, limit)
-            result = ad_hoc.query_data_frame(sql_query, original_data_frame, abs_path_to_data_pickle).to_html(justify="center", classes="table")
-    
+            try:
+                result = ad_hoc.query_data_frame(sql_query, original_data_frame, abs_path_to_data_pickle)
+                result = result.to_html(justify="center", classes="table")
+            except SyntaxError as error:
+                result = f"<h3> {str(error)} </h3>"
         elif query_type == "UPDATE":
             #table_to_update = request.form.get("tableToUpdate")
             table_columns = request.form.getlist("tableColumns")
             set_expression = request.form.get("setExpression")
             where_condition = ad_hoc.get_where_condition(request, name_of_original_data_frame_variable)
             sql_query = ad_hoc.SqlUpdateQuery(table_columns, set_expression, where_condition)
-            result = "<h3> update sucessful </h3>" + ad_hoc.query_data_frame(sql_query, original_data_frame, abs_path_to_data_pickle).to_html(justify="center", classes="table")
-
+            try:
+                result = ad_hoc.query_data_frame(sql_query, original_data_frame, abs_path_to_data_pickle).to_html(justify="center", classes="table")
+                result = "<h3> update sucessful </h3>" + result
+            except SyntaxError as error:
+                result = f"<h3> {str(error)} </h3>"
+       
         return make_secure_response(render_template_string(result))
     else:
         return make_secure_response(redirect(url_for("login")))
@@ -135,29 +143,65 @@ def make_plot():
         #table_to_select_from = request.form.get("tableToSelectFrom")
         where_condition = ad_hoc.get_where_condition(request, name_of_original_data_frame_variable)
         sql_query =  ad_hoc.SqlSelectQuery(table_columns, where_condition, None)
-        df = ad_hoc.query_data_frame(sql_query, original_data_frame, abs_path_to_data_pickle)
-        plot = main_module.make_plot(df, x_axis, y_axis)
-    
-        return make_secure_response(plot)
+        try:
+            df = ad_hoc.query_data_frame(sql_query, original_data_frame, abs_path_to_data_pickle)
+            plot = main_module.make_plot(df, x_axis, y_axis)
+        except SyntaxError as error:
+            plot =  f"<h3> {str(error)} </h3>"
+        return make_secure_response(render_template_string(plot))
+        
     else:
         return make_secure_response(redirect(url_for("login")))
 
-
-@app.route('/plots')
-def plots():
+@app.route('/calculate', methods=["GET", "POST"])
+def calculate():
     if "username" in session:
-        plots = ""
-        for p in main_module.main(original_data_frame):
-            plots = plots + p
-        return make_secure_response(render_template(
-            'plots.html',
-            title='Plots',
-            year=datetime.now().year,
-            message='Description',
-            plots=plots
-        ))
+        if request.method == "POST":
+            return do_calculate()
+        else:
+            options = [
+                ad_hoc.CalculateOption("census_tract", "=", None, False),
+                ad_hoc.CalculateOption("derived_dwelling_category", "=", "\"Single Family (1-4 Units):Site-Built\"", True),
+                ad_hoc.CalculateOption("loan_purpose", "=", "1", True),
+                ad_hoc.CalculateOption("loan_amount", "<", "1_000_000", True),
+                ad_hoc.CalculateOption("income", "<", "100", True),
+                ad_hoc.CalculateOption("debt_to_income_ratio", "<", "100", True),
+                ad_hoc.CalculateOption("debt_to_income_ratio", ">", "0", True),
+                ad_hoc.CalculateOption("property_value", "<", "1_000_000", True),
+            ]
+            return make_secure_response(render_template(
+                "calculate.html",
+                title='Calculate',
+                year=datetime.now().year,
+                message='Your calculate page.',
+                options=options,
+             ))
     else:
         return make_secure_response(redirect(url_for("login")))
+
+def do_calculate():
+        x_axis = "income"
+        y_axis = "loan_amount"
+
+        table_columns = []
+        
+        user_income = ad_hoc.parse_numerical_expression(request.form.get("userIncome"))
+
+        table_column = request.form.get("tableColumns0")
+        table_column_index = 0
+        while table_column is not None:
+            table_columns.append(table_column)
+            table_column_index += 1
+            table_column = request.form.get("tableColumns" + str(table_column_index))
+        where_condition = ad_hoc.get_where_condition(request, name_of_original_data_frame_variable)
+        sql_query =  ad_hoc.SqlSelectQuery(table_columns, where_condition, None)
+        try:
+            df = ad_hoc.query_data_frame(sql_query, original_data_frame, abs_path_to_data_pickle)
+            plot = main_module.make_plot(df, x_axis, y_axis, user_income)
+        except Exception as error:
+            raise error
+            plot =  f"<h3> {str(error)} </h3>"
+        return make_secure_response(render_template_string(plot))
 
 @app.route("/logout")
 def logout():

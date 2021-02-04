@@ -23,11 +23,11 @@
 	<div class="row g-0" id="limitDivRow"></div>
 
 	<button type="submit" class="btn btn-primary btn-lg col-sm-3 g-0" form="sqlQueryForm" formaction="/query" formmethod="POST" disabled id="submitQueryButton">
-		<span class="spinner-border spinner-border-sm" role="status" hidden="true" id="submitQuerySpinner"></span>
+		<span class="spinner-border spinner-border-sm" role="status" hidden id="submitQuerySpinner"></span>
 		Submit Query
 	</button>
 
-	<div class="row g-0" id="plotDivRow" hidden="true">
+	<div class="row g-0" id="plotDivRow" hidden>
 		<label for="xAxisSelect" class="col-sm-1"> x-axis </label>
 		<div class="col-sm-4">
 			<select class="form-select" name="xAxis" id="xAxisSelect"></select>
@@ -37,7 +37,7 @@
 			<select class="form-select" name="yAxis" id="yAxisSelect"></select>
 		</div>
 		<button type="submit" class="btn btn-primary btn-lg col-sm-3 g-0" form="sqlQueryForm" formaction="/plot" formmethod="POST" formtarget="_blank" id="plotButton">
-			<span class="spinner-border spinner-border-sm" role="status" hidden="true" id="plotSpinner"></span>
+			<span class="spinner-border spinner-border-sm" role="status" hidden id="plotSpinner"></span>
 			Plot
 		</button>
 	</div>
@@ -393,19 +393,19 @@
 			addOptionsToAxes()
 
 		} else if (submitterButton.id === "plotButton") {
-			//removes all child nodes in queryResult
+			//removes all child nodes in plot
 			const plot = document.querySelector("#plot")
 			while(plot.firstChild){
 				plot.removeChild(plot.firstChild);
 			}
 
-			//disables submitQueryButton and shows spinner
+			//disables plotButton and shows spinner
 			const plotButton = document.querySelector("#plotButton");
 			plotButton.disabled = true;
 			const plotSpinner = document.querySelector("#plotSpinner")
 			plotSpinner.hidden = false
 
-			//gets queryResult's innerHTML from server
+			//gets plot's innerHTML from server
 			const result = await fetch(submitterButton.formAction, {
 					method: submitterButton.formMethod,
 					body: new URLSearchParams([...(new FormData(form))]),
@@ -417,7 +417,7 @@
 				)
 				.catch((error) => console.log(error));
 
-			//enables plotButton and hides plotspinner
+			//enables plotButton and hides plotSpinner
 			plotButton.disabled = false;
 			plotSpinner.hidden = true;
 		}

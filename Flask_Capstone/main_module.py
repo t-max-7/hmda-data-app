@@ -6,6 +6,7 @@ from io import BytesIO
 
 import pandas as pd
 from matplotlib.figure import Figure
+from matplotlib import rcParams
 
 
 import numpy as np
@@ -166,22 +167,31 @@ def main(csv_data):
     yield f"<img src='data:image/png;base64,{data}'/>"
 
 
-def make_plot(data_frame, x_axis, y_axis):
+def make_plot(data_frame, x_axis, y_axis, user_point_x=None):
     df = data_frame[[x_axis, y_axis]].dropna()
     XX = pd.DataFrame(df[x_axis])
     YY = pd.DataFrame(df[y_axis])
 
     # finds regression
-    model = Pipeline([('poly', PolynomialFeatures(degree=1)), ('linear', LinearRegression(fit_intercept=False))])
-    scores = []
-    kfold = KFold(n_splits=2, shuffle=True, random_state=42)
-    for i, (train, test) in enumerate(kfold.split(XX, YY)):
-        model.fit(XX.iloc[train,:], YY.iloc[train,:])
-        score = model.score(XX.iloc[test,:], YY.iloc[test,:])
-        scores.append(score)
-
-    YY_pred = model.predict(XX)
-
+    should_do_user_point = False
+    try:
+        model = Pipeline([('poly', PolynomialFeatures(degree=1)), ('linear', LinearRegression(fit_intercept=False))])
+        scores = []
+        kfold = KFold(n_splits=2, shuffle=True, random_state=42)
+        for i, (train, test) in enumerate(kfold.split(XX, YY)):
+            model.fit(XX.iloc[train,:], YY.iloc[train,:])
+            score = model.score(XX.iloc[test,:], YY.iloc[test,:])
+            scores.append(score)
+        YY_pred = model.predict(XX)
+        
+        #user_point_x prediction
+        if user_point_x is not None: 
+            should_do_user_point = True
+    # when there is less than 2 samples then can't do regression:
+    except ValueError:
+        YY_pred = YY
+        
+    
     # creates figure
     fig = Figure()
     ax = fig.subplots()
@@ -189,16 +199,28 @@ def make_plot(data_frame, x_axis, y_axis):
     ax.set_ylabel(y_axis)
 
     #Kmeans
-    cluster_y_pred = cluster.KMeans(n_clusters=2).fit_predict(XX, YY)
-    ax.scatter(XX, YY, c=cluster_y_pred)
+    try:
+        cluster_y_pred = cluster.KMeans(n_clusters=2).fit_predict(XX, YY)
+        #plots data points colored according to assigned cluster
+        ax.scatter(XX, YY, c=cluster_y_pred)
+    #when there is less than 2 samples then can't do cluster:
+    except ValueError:
+        #plots data points
+        ax.scatter(XX,YY)
     #
 
-    #regression
+    #plot regression
     ax.plot(XX, YY_pred, label="regression", color="red")
+    
     
     buf = BytesIO()
     fig.savefig(buf, format="png")
     data = base64.b64encode(buf.getbuffer()).decode("ascii")
-        
-    return f"<img src='data:image/png;base64,{data}'/>"
+
+    if should_do_user_point:
+        user_point_x = [[user_point_x]]
+        user_point_y_pred = model.predict(user_point_x)
+        return f"<img src='data:image/png;base64,{data}'/> <h2>recommended value is: {user_point_y_pred[0][0]}</h2>"
+    else:
+        return f"<img src='data:image/png;base64,{data}'/>"
         

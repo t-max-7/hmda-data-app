@@ -20,36 +20,78 @@ class SqlUpdateQuery:
 def query_data_frame(sql_query, original_data_frame, file_path):
     # original_data_frame represents the data_frame which is stored in file_path
     # df represents a version of original_data_frame that will be returned
-    if isinstance(sql_query, SqlSelectQuery):
-        table_columns = sql_query.table_columns
-        limit = sql_query.limit
-        if limit is not None:
-            df = original_data_frame[table_columns].head(limit)
-        else:
-            df = original_data_frame[table_columns]
+    try:
+        if isinstance(sql_query, SqlSelectQuery):
+            table_columns = sql_query.table_columns
+            limit = sql_query.limit
+            where_condition = sql_query.where_condition
 
-        where_condition = sql_query.where_condition
-        if where_condition != "":
-            df = df[eval(where_condition)]
-    elif isinstance(sql_query, SqlUpdateQuery):
-        table_columns = sql_query.table_columns
-        set_expression = sql_query.set_expression
-        arbitrary_limit = 100
+            if where_condition != "":
+                df = original_data_frame[eval(where_condition)]
+            else:
+                df = original_data_frame
 
-        where_condition = sql_query.where_condition
-        if where_condition != "":
-            # updates data_frame according to the expression
-            original_data_frame.loc[eval(where_condition), table_columns] = parse_set_expression(set_expression)
-            df = original_data_frame.loc[eval(where_condition), table_columns].head(arbitrary_limit)
-        else:
-            # updates data_frame according to the expression
-            original_data_frame.loc[:, table_columns] = set_expression
-            df = original_data_frame.loc[:, table_columns].head(arbitrary_limit)
-        #saves to pickle file
-        original_data_frame.to_pickle(file_path)
-    return df #a dataframe
+            if limit is not None:
+                df = df[table_columns].head(limit)
+            else:
+                df = df[table_columns]
+        elif isinstance(sql_query, SqlUpdateQuery):
+            table_columns = sql_query.table_columns
+            set_expression = sql_query.set_expression
+            arbitrary_limit = 100
 
-def parse_set_expression(set_expression):
+            where_condition = sql_query.where_condition
+            if where_condition != "":
+                # updates data_frame according to the expression
+                original_data_frame.loc[eval(where_condition), table_columns] = parse_numerical_expression(set_expression)
+                df = original_data_frame.loc[eval(where_condition), table_columns].head(arbitrary_limit)
+            else:
+                # updates data_frame according to the expression
+                original_data_frame.loc[:, table_columns] = set_expression
+                df = original_data_frame.loc[:, table_columns].head(arbitrary_limit)
+            #saves to pickle file
+            original_data_frame.to_pickle(file_path)
+        return df #a dataframe
+    except (SyntaxError, NameError) as e:
+        #TEST raise e
+        raise SyntaxError("Error: at least one of the where conditions contains a syntax error." +
+                          "\n" +
+                          "If the value is a string it must be enclosed in quotes e.g. \"some string\"." + 
+                          "\n" + 
+                          "If the value is a number it cannot contain a leading zero e.g. 100 not 0100."
+                          )
+
+
+    #if isinstance(sql_query, SqlSelectQuery):
+    #    table_columns = sql_query.table_columns
+    #    limit = sql_query.limit
+    #    if limit is not None:
+    #        df = original_data_frame[table_columns].head(limit)
+    #    else:
+    #        df = original_data_frame[table_columns]
+
+    #    where_condition = sql_query.where_condition
+    #    if where_condition != "":
+    #        df = df[eval(where_condition)]
+    #elif isinstance(sql_query, SqlUpdateQuery):
+    #    table_columns = sql_query.table_columns
+    #    set_expression = sql_query.set_expression
+    #    arbitrary_limit = 100
+
+    #    where_condition = sql_query.where_condition
+    #    if where_condition != "":
+    #        # updates data_frame according to the expression
+    #        original_data_frame.loc[eval(where_condition), table_columns] = parse_set_expression(set_expression)
+    #        df = original_data_frame.loc[eval(where_condition), table_columns].head(arbitrary_limit)
+    #    else:
+    #        # updates data_frame according to the expression
+    #        original_data_frame.loc[:, table_columns] = set_expression
+    #        df = original_data_frame.loc[:, table_columns].head(arbitrary_limit)
+    #    #saves to pickle file
+    #    original_data_frame.to_pickle(file_path)
+    #return df #a dataframe
+
+def parse_numerical_expression(set_expression):
     try:
        return int(set_expression)
     except ValueError:
@@ -80,3 +122,10 @@ def get_where_condition(request, name_of_original_data_frame_variable):
     return where_condition
 
 
+class CalculateOption:
+    def __init__(self, column_name, relational_operator, default_value, hidden):
+        self.column_name = column_name
+        self.relational_operator = relational_operator
+        self.default_value = default_value
+        self.hidden = hidden
+        
