@@ -66,8 +66,7 @@ def login_user():
 
     password = request.form.get("password")
     
-    #TEST IMPORTANT CHANGE : get rid of 'True or' when deploying!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    if True or compare_hash(pyargon2.hash(password, salt), hash):
+    if compare_hash(pyargon2.hash(password, salt), hash):
         session["username"] = username
         return make_secure_response(redirect(url_for("home")))
     else:
