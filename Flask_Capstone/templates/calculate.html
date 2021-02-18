@@ -5,95 +5,44 @@
 <h2>{{ title }}</h2>
 <h3>{{ message }}</h3>
 
-<p>Use this area to provide additional information.</p>
+<p>
+    Enter the mortgage applicant's income and census tract code to get an recommended loan amount.
+    If you are unsure of the census tract code of the applicant, there are lists of tract codes and maps for each
+    AZ county at <a href="https://www2.census.gov/geo/maps/DC2020/PL20/st04_az/censustract_maps/">this census website</a>.
+</p>
 
 <form class="container" id="calculateForm" method="POST">
     <div class="input-group mb-3">
         <span class="input-group-text">income (in thousands)</span>
         <input type="text" class="form-control" name="userIncome" />
     </div>
-{% for option in options %}
+    {% for option in options %}
     {% if option.hidden %}
-        <div class="input-group mb-3" hidden>
-            <span class="input-group-text">{{ option.column_name }}</span>
-            <input type="text" class="form-control" name="tableColumns{{ loop.index0 }}" value="{{ option.column_name }}" />
-            <input type="text" class="form-control" name="relationalOperator{{ loop.index0 }}" value="{{ option.relational_operator }}" />
-            <input type="text" class="form-control" name="rightOperand{{ loop.index0 }}" value="{{ option.default_value }}" />
-            <input type="text" class="form-control" name="logicalOperator{{ loop.index0 }}" value="AND"/>
-        </div>
+    <div class="input-group mb-3" hidden>
+        <span class="input-group-text">{{ option.column_name }}</span>
+        <input type="text" class="form-control" name="tableColumns{{ loop.index0 }}" value="{{ option.column_name }}" />
+        <input type="text" class="form-control" name="relationalOperator{{ loop.index0 }}" value="{{ option.relational_operator }}" />
+        <input type="text" class="form-control" name="rightOperand{{ loop.index0 }}" value="{{ option.default_value }}" />
+        <input type="text" class="form-control" name="logicalOperator{{ loop.index0 }}" value="AND" />
+    </div>
     {% else %}
-        <div class="input-group mb-3">
-            <span class="input-group-text">{{ option.column_name }}</span>
-            <input type="text" class="form-control" hidden name="tableColumns{{ loop.index0 }}" value="{{ option.column_name }}" />
-            <input type="text" class="form-control" hidden name="relationalOperator{{ loop.index0 }}" value="{{ option.relational_operator }}" />
-            <input type="text" class="form-control" name="rightOperand{{ loop.index0 }}" />
-            <input type="text" class="form-control" hidden name="logicalOperator{{ loop.index0 }}" value="AND" />
-        </div>
+    <div class="input-group mb-3">
+        <span class="input-group-text">{{ option.column_name }}</span>
+        <input type="text" class="form-control" hidden name="tableColumns{{ loop.index0 }}" value="{{ option.column_name }}" />
+        <input type="text" class="form-control" hidden name="relationalOperator{{ loop.index0 }}" value="{{ option.relational_operator }}" />
+        <input type="text" class="form-control" name="rightOperand{{ loop.index0 }}" />
+        <input type="text" class="form-control" hidden name="logicalOperator{{ loop.index0 }}" value="AND" />
+    </div>
     {% endif %}
-{% endfor %}
+    {% endfor %}
     <button type="submit" class="btn btn-primary btn-lg" id="calculateButton">
         <span class="spinner-border spinner-border-sm" role="status" hidden id="calculateSpinner"></span>
         Submit
     </button>
-    
-    <!--<div class="input-group mb-3">
-        <span class="input-group-text">census_tract</span>
-        <input type="text" class="form-control" name="tableColumns0" value="census_tract" />
-        <input type="text" class="form-control" name="relationalOperator0" />
-        <input type="text" class="form-control" name="rightOperand0" />
-        <input type="text" class="form-control" name="logicalOperator0" />
-    </div>
-    <div class="input-group mb-3" hidden>
-        <span class="input-group-text">derived_dwelling_category</span>
-        <input type="text" class="form-control" name="tableColumns1" value="derived_dwelling_category" />
-        <input type="text" class="form-control" name="relationalOperator1" />
-        <input type="text" class="form-control" name="rightOperand1" />
-        <input type="text" class="form-control" name="logicalOperator1" />
-    </div>
-    <div class="input-group mb-3" hidden>
-        <span class="input-group-text">loan_purpose</span>
-        <input type="text" class="form-control" name="tableColumns2" value="loan_purpose" />
-        <input type="text" class="form-control" name="relationalOperator2" />
-        <input type="text" class="form-control" name="rightOperand2" />
-        <input type="text" class="form-control" name="logicalOperator2" />
-    </div>
-    <div class="input-group mb-3" hidden>
-        <span class="input-group-text">loan_amount</span>
-        <input type="text" class="form-control" name="tableColumns3" value="loan_amount" />
-        <input type="text" class="form-control" name="relationalOperator3" />
-        <input type="text" class="form-control" name="rightOperand3" />
-        <input type="text" class="form-control" name="logicalOperator3" />
-    </div>
-    <div class="input-group mb-3">
-        <span class="input-group-text">income</span>
-        <input type="text" class="form-control" name="tableColumns4" value="income" />
-        <input type="text" class="form-control" name="relationalOperator4" />
-        <input type="text" class="form-control" name="rightOperand4" />
-        <input type="text" class="form-control" name="logicalOperator4" />
-    </div>
-    <div class="input-group mb-3" hidden>
-        <span class="input-group-text">debt_to_income_ratio_max</span>
-        <input type="text" class="form-control" name="tableColumns5" value="debt_to_income_ratio" />
-        <input type="text" class="form-control" name="relationalOperator5" />
-        <input type="text" class="form-control" name="rightOperand5" />
-        <input type="text" class="form-control" name="logicalOperator5" />
-    </div>
-    <div class="input-group mb-3" hidden>
-        <span class="input-group-text">debt_to_income_ratio_min</span>
-        <input type="text" class="form-control" name="tableColumns6" value="debt_to_income_ratio" />
-        <input type="text" class="form-control" name="relationalOperator6" />
-        <input type="text" class="form-control" name="rightOperand6" />
-        <input type="text" class="form-control" name="logicalOperator6" />
-    </div>
-    <div class="input-group mb-3" hidden>
-        <span class="input-group-text">property_value</span>
-        <input type="text" class="form-control" name="tableColumns7" value="property_value" />
-        <input type="text" class="form-control" name="relationalOperator7" />
-        <input type="text" class="form-control" name="rightOperand7" />
-        <input type="text" class="form-control" name="logicalOperator7" />
-    </div>-->
 </form>
+
 <div id="plot"></div>
+
 <script>
     const calculateForm = document.querySelector("#calculateForm");
     const calculateButton = document.querySelector("#calculateButton")
@@ -128,8 +77,6 @@
         calculateButton.disabled = false;
         calculateSpinner.hidden = true;
     }
-   
-        
-    
 </script>
+
 {% endblock %}

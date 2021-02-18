@@ -56,65 +56,32 @@ def query_data_frame(sql_query, original_data_frame, file_path):
         #TEST raise e
         raise SyntaxError("Error: at least one of the where conditions contains a syntax error." +
                           "\n" +
-                          "If the value is a string it must be enclosed in quotes e.g. \"some string\"." + 
-                          "\n" + 
-                          "If the value is a number it cannot contain a leading zero e.g. 100 not 0100."
+                          "If the value is a string it must be enclosed in quotes e.g. \"some string\"."
                           )
 
-
-    #if isinstance(sql_query, SqlSelectQuery):
-    #    table_columns = sql_query.table_columns
-    #    limit = sql_query.limit
-    #    if limit is not None:
-    #        df = original_data_frame[table_columns].head(limit)
-    #    else:
-    #        df = original_data_frame[table_columns]
-
-    #    where_condition = sql_query.where_condition
-    #    if where_condition != "":
-    #        df = df[eval(where_condition)]
-    #elif isinstance(sql_query, SqlUpdateQuery):
-    #    table_columns = sql_query.table_columns
-    #    set_expression = sql_query.set_expression
-    #    arbitrary_limit = 100
-
-    #    where_condition = sql_query.where_condition
-    #    if where_condition != "":
-    #        # updates data_frame according to the expression
-    #        original_data_frame.loc[eval(where_condition), table_columns] = parse_set_expression(set_expression)
-    #        df = original_data_frame.loc[eval(where_condition), table_columns].head(arbitrary_limit)
-    #    else:
-    #        # updates data_frame according to the expression
-    #        original_data_frame.loc[:, table_columns] = set_expression
-    #        df = original_data_frame.loc[:, table_columns].head(arbitrary_limit)
-    #    #saves to pickle file
-    #    original_data_frame.to_pickle(file_path)
-    #return df #a dataframe
-
-def parse_numerical_expression(set_expression):
+def parse_numerical_expression(expression):
     try:
-       return int(set_expression)
+       return int(expression)
     except ValueError:
         try:
-            return float(set_expression)
+            return float(expression)
         except ValueError:
-            return set_expression
+            return expression
 
 def get_where_condition(request, name_of_original_data_frame_variable):
-    loops = 0
+    
     loop_limit = 200
-    row_number = 0
+    row_index = 0
     where_condition = ""
-    while loops < loop_limit:
-        table_column_for_where_condition = request.form.get(f"tableColumns{row_number}")
+    while row_index < loop_limit:
+        table_column_for_where_condition = request.form.get(f"tableColumns{row_index}")
         if table_column_for_where_condition is not None:
-            relational_operator = request.form.get(f"relationalOperator{row_number}")
-            right_operand = request.form.get(f"rightOperand{row_number}")
-            logical_operator = request.form.get(f"logicalOperator{row_number}")
+            relational_operator = request.form.get(f"relationalOperator{row_index}")
+            right_operand =  parse_numerical_expression(request.form.get(f"rightOperand{row_index}"))
+            logical_operator = request.form.get(f"logicalOperator{row_index}")
             #IMPORTANT: IF CHANGE VARIABLE NAME OF VARIABLE original_data_frame IN routes.py THIS WILL NOT WORK !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
             where_condition = where_condition + f"({name_of_original_data_frame_variable}[\"{table_column_for_where_condition}\"] {relational_operator} {right_operand}) {logical_operator} "
-        row_number += 1
-        loops += 1
+        row_index += 1
 
     if where_condition != "":
         where_condition = where_condition.replace("AND", "&").replace("OR", "|").replace(" = ", " == ")[0:-3]
@@ -129,3 +96,8 @@ class CalculateOption:
         self.default_value = default_value
         self.hidden = hidden
         
+class PlotOption:
+    def __init__(self, plot_type, x_axis=None, y_axis=None):
+        self.plot_type = plot_type
+        self.x_axis = x_axis
+        self.y_axis = y_axis

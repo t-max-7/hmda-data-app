@@ -1,0 +1,173 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<h2>{{ title }}</h2>
+<h3>{{ message }}</h3>
+
+<p>If the plot is a pie plot, then only the y-axis is used to make the plot.</p>
+
+
+<form method="POST" class="container" id="dashboardForm" >
+    <button type="button" class="btn btn-secondary btn-lg col-sm-3 g-0" id="addPlotChooserButton">Add plot</button>
+    <div id="plotChoosersDiv">
+        {% for default_plot_option in default_plot_options %}
+            <div class="row g-0" id="plotChooserDivRow{{ loop.index0 }}">
+                <label for="plotTypeSelect{{ loop.index0 }}" class="col-sm-2 col-form-label">plot type</label>
+                <select class="col-sm-10" name="plotType{{ loop.index0 }}" id="plotTypeSelect{{ loop.index0 }}">
+                    {% for plot_type in plot_types %}
+                        {% if plot_type == default_plot_option.plot_type.value %}
+                            <option value="{{ plot_type }}" selected>{{ plot_type }}</option>
+                        {% else %}
+                            <option value="{{ plot_type }}">{{ plot_type }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+
+                <label for="xAxisSelect{{ loop.index0 }}" class="col-sm-2 col-form-label">x-axis</label>
+                <select class="col-sm-10" name="xAxis{{ loop.index0 }}" id="xAxisSelect{{ loop.index0 }}">
+                    {% for column_name in table_info.column_names %}
+                        {% if column_name == default_plot_option.x_axis %}
+                            <option value="{{ column_name }}" selected>{{ column_name }}</option>
+                        {% else %}
+                            <option value="{{ column_name }}">{{ column_name }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+
+                <label for="yAxisSelect{{ loop.index0 }}" class="col-sm-2 col-form-label">y-axis</label>
+                <select class="col-sm-10" name="yAxis{{ loop.index0 }}" id="yAxisSelect{{ loop.index0 }}">
+                    {% for column_name in table_info.column_names %}
+                        {% if column_name == default_plot_option.y_axis%}
+                            <option value="{{ column_name }}" selected>{{ column_name }}</option>
+                        {% else %}
+                            <option value="{{ column_name }}">{{ column_name }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+            <hr />
+        {% endfor %}
+    </div>
+    <button type="submit" class="btn btn-primary btn-lg col-sm-3 g-0" id="dashboardSubmitButton">
+        <span class="spinner-border spinner-border-sm" role="status" hidden id="dashboardSubmitSpinner"></span>
+        <p id="dashboardSubmitButtonText">Submit</p>
+    </button>
+</form>
+
+<div id="plotsDiv">  </div>
+
+<script>
+    const addPlotChooserButton = document.querySelector("#addPlotChooserButton");
+    //IMPORTANT: AFFECTS THE NAME ATTRIBUTE OF HTML ELEMENTS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    //var rowIndex = 1
+    var rowIndex = {{ default_plot_options|length }}
+    //plotChooserButton eventListener
+    addPlotChooserButton.addEventListener("click", () => {
+        const plotChoosersDiv = document.querySelector("#plotChoosersDiv");
+
+        const plotChooserDivRow = document.createElement("div");
+        plotChooserDivRow.className = "row g-0";
+        plotChooserDivRow.id = "plotChooserDivRow" + rowIndex;
+        plotChoosersDiv.appendChild(plotChooserDivRow);
+
+        //plotTypeSelect
+        const plotTypeSelect = document.createElement("select");
+        plotTypeSelect.className = "col-sm-10"
+        plotTypeSelect.name = "plotType" + rowIndex;
+        const plotTypes = {{ plot_types|safe }} //Python variable
+        for (const plotType of plotTypes) {
+            const option = document.createElement("option");
+            option.value = plotType;
+            option.appendChild(document.createTextNode(plotType));
+            plotTypeSelect.appendChild(option);
+        }
+        const plotTypeSelectLabel = document.createElement("label")
+        plotTypeSelectLabel.htmlFor = plotTypeSelect.name
+        plotTypeSelectLabel.className = "col-sm-2 col-form-label"
+        plotTypeSelectLabel.appendChild(document.createTextNode("plot type"))
+        plotChooserDivRow.appendChild(plotTypeSelectLabel)
+        plotChooserDivRow.appendChild(plotTypeSelect);
+
+        //xAxisSelect
+        const xAxisSelect = document.createElement("select");
+        xAxisSelect.className = "col-sm-10"
+        xAxisSelect.name = "xAxis" + rowIndex;
+        const columnNames = {{ table_info.column_names|safe }} //Python variable
+        for (const columnName of columnNames) {
+            const option = document.createElement("option");
+            option.value = columnName;
+            option.appendChild(document.createTextNode(columnName));
+            xAxisSelect.appendChild(option)
+        }
+        const xAxisSelectLabel = document.createElement("label")
+        xAxisSelectLabel.htmlFor = xAxisSelect.name
+        xAxisSelectLabel.className = "col-sm-2 col-form-label"
+        xAxisSelectLabel.appendChild(document.createTextNode("x-axis"))
+        plotChooserDivRow.appendChild(xAxisSelectLabel)
+        plotChooserDivRow.appendChild(xAxisSelect);
+
+        //yAxisSelect
+        const yAxisSelect = document.createElement("select");
+        yAxisSelect.className = "col-sm-10"
+        yAxisSelect.name = "yAxis" + rowIndex;
+        for (const columnName of columnNames) {
+            const option = document.createElement("option");
+            option.value = columnName;
+            option.appendChild(document.createTextNode(columnName));
+            yAxisSelect.appendChild(option)
+        }
+        const yAxisSelectLabel = document.createElement("label")
+        yAxisSelectLabel.htmlFor = yAxisSelect.name
+        yAxisSelectLabel.className = "col-sm-2 col-form-label"
+        yAxisSelectLabel.appendChild(document.createTextNode("y-axis"))
+        plotChooserDivRow.appendChild(yAxisSelectLabel)
+        plotChooserDivRow.appendChild(yAxisSelect);
+
+        //hr
+        const hr = document.createElement("hr")
+        plotChoosersDiv.appendChild(hr)
+
+        //IMPORTANT: must increment rowIndex so that names are correct when the request is sent to server
+        rowIndex += 1
+    })
+
+    //submit eventListener
+    const dashboardForm = document.querySelector("#dashboardForm")
+    dashboardForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const form = event.target;
+        const submitterButton = event.submitter
+
+        // removes previous plots
+        const plotsDiv = document.querySelector("#plotsDiv");
+        while (plotsDiv.firstChild) {
+            plotsDiv.removeChild(plotsDiv.firstChild);
+        }
+
+        // disables submitter button and shows dashboardSubmitSpinner
+        submitterButton.disabled = true;
+        dashboardSubmitButtonText = document.querySelector("#dashboardSubmitButtonText")
+        dashboardSubmitButtonText.innerText = "Loading Plot(s)"
+        const dashboardSubmitSpinner = document.querySelector("#dashboardSubmitSpinner");
+        dashboardSubmitSpinner.hidden = false;
+
+        // gets plotsDiv's innerHTML from server
+        const result = await fetch(form.action, {
+            method: form.method,
+            body: new URLSearchParams([...(new FormData(form))]),
+            })
+            .then((response) => response.text())
+            .then((text) => { plotsDiv.innerHTML = text })
+            .catch((error) => console.log(error))
+        // enables submitter button and hides spinner
+        submitterButton.disabled = false;
+        dashboardSubmitButtonText.innerText = "Submit"
+        dashboardSubmitSpinner.hidden = true;
+    })
+
+    //click dashboardSubmitButton when this html is first rendered to load default plots
+    document.querySelector("#dashboardSubmitButton").click()
+</script>
+
+{% endblock %}

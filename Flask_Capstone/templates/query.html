@@ -4,6 +4,8 @@
 <h2>{{ title }}</h2>
 <h3>{{ message }}</h3>
 
+<p></p>
+
 <form class="container" id="sqlQueryForm">
 	<div id="sqlQueryDiv">
 		<div class="row g-0" id="sqlQueryDivRow0">
@@ -12,7 +14,6 @@
 					<option value=""></option>
 					<option value="SELECT">SELECT</option>
 					<option value="UPDATE">UPDATE</option>
-					<option value="DELETE FROM">DELETE FROM</option>
 				</select>
 			</div>
 		</div>
@@ -27,20 +28,34 @@
 		Submit Query
 	</button>
 
+	<!-- used for testing, normally hidden-->
 	<div class="row g-0" id="plotDivRow" hidden>
+		<label for="plotType" class="col-sm-1">plot type</label>
+		<div class="col-sm-2">
+			<select class="form-select" name="plotType" id="plotTypeSelect">
+				{% for plot_type in plot_types %}
+					<option value="{{ plot_type }}">{{ plot_type }}</option>
+				{% endfor %}
+			</select>
+		</div>
+
 		<label for="xAxisSelect" class="col-sm-1"> x-axis </label>
-		<div class="col-sm-4">
+		<div class="col-sm-2">
 			<select class="form-select" name="xAxis" id="xAxisSelect"></select>
 		</div>
+
 		<label for="yAxisSelect" class="col-sm-1"> y-axis </label>
-		<div class="col-sm-4">
+		<div class="col-sm-2">
 			<select class="form-select" name="yAxis" id="yAxisSelect"></select>
 		</div>
+
 		<button type="submit" class="btn btn-primary btn-lg col-sm-3 g-0" form="sqlQueryForm" formaction="/plot" formmethod="POST" formtarget="_blank" id="plotButton">
 			<span class="spinner-border spinner-border-sm" role="status" hidden id="plotSpinner"></span>
 			Plot
 		</button>
 	</div>
+	<!-- -->
+
 </form>
 <div id="plot"></div>
 <div id="queryResult"></div>
@@ -182,8 +197,6 @@
 
 				break;
 
-			case "DELETE FROM":
-				break;
 			default:
 				submitQueryButton.disabled = true;
 		}
@@ -318,37 +331,37 @@
 		//removes all of sqlQueryDivRow0 child nodes except sqlStatementTypeSelectDivCol
 		let nodesToRemove = []
 		sqlQueryDivRow0.childNodes.forEach((node) => {
-			if(node.id !== "sqlStatementTypeSelectDivCol") {
+			if (node.id !== "sqlStatementTypeSelectDivCol") {
 					nodesToRemove.push(node)
 			}
 		});
 		nodesToRemove.forEach(node => node.remove())
 
 		//removes all of sqlQueryDivRow1 child nodes
-		while(sqlQueryDivRow1.firstChild) {
+		while (sqlQueryDivRow1.firstChild) {
 			sqlQueryDivRow1.removeChild(sqlQueryDivRow1.firstChild)
 		}
 		//removes all of sqlQueryDivRow2 child nodes
-		while(sqlQueryDivRow2.firstChild) {
+		while (sqlQueryDivRow2.firstChild) {
 			sqlQueryDivRow2.removeChild(sqlQueryDivRow2.firstChild)
 		}
 
 		//removes all added whereConditionDivRow elements in sqlQueryDiv
 		nodesToRemove = []
 		sqlQueryDiv.childNodes.forEach((node) => {
-			if((node.id !== "sqlQueryDivRow0") && (node.id !== "sqlQueryDivRow1") && (node.id !== "sqlQueryDivRow2")) {
+			if ((node.id !== "sqlQueryDivRow0") && (node.id !== "sqlQueryDivRow1") && (node.id !== "sqlQueryDivRow2")) {
 				nodesToRemove.push(node)
 			}
 		})
 		nodesToRemove.forEach(node => node.remove())
 
 		//removes all child nodes in limitDivRow
-		while(limitDivRow.firstChild) {
+		while (limitDivRow.firstChild) {
 			limitDivRow.removeChild(limitDivRow.firstChild)
 		}
 
 		//removes all child nodes in queryResult
-		while(queryResult.firstChild){
+		while (queryResult.firstChild){
 			queryResult.removeChild(queryResult.firstChild)
 		}
 
@@ -364,7 +377,7 @@
 		if (submitterButton.id === "submitQueryButton") {
 			//removes all child nodes in queryResult
 			const queryResult = document.querySelector("#queryResult")
-			while(queryResult.firstChild){
+			while (queryResult.firstChild) {
 				queryResult.removeChild(queryResult.firstChild);
 			}
 
@@ -383,14 +396,16 @@
 				.then((text) => { queryResult.innerHTML = text })
 				.catch((error) => console.log(error));
 
-			//enables submitQueryButton and hides spiner
+			//enables submitQueryButton and hides spinner
 			submitQueryButton.disabled = false;
 			submitQuerySpinner.hidden = true;
 
-			//shows plotDivRow and adds options to Axes
-			const plotDivRow = document.querySelector("#plotDivRow")
-			plotDivRow.hidden = false
-			addOptionsToAxes()
+			//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! shows plotDivRow and adds options to Axes
+            //const plotDivRow = document.querySelector("#plotDivRow")
+            //plotDivRow.hidden = false
+            //addOptionsToAxes()
+			//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 
 		} else if (submitterButton.id === "plotButton") {
 			//removes all child nodes in plot
@@ -431,7 +446,7 @@
 		while (xAxisSelect.firstChild) {
 			xAxisSelect.removeChild(xAxisSelect.firstChild)
 		}
-		while(yAxisSelect.firstChild) {
+		while (yAxisSelect.firstChild) {
 			yAxisSelect.removeChild(yAxisSelect.firstChild)
 		}
 

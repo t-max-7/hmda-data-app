@@ -8,7 +8,6 @@ from flask import make_response, redirect, render_template, render_template_stri
 from Flask_Capstone import app
 
 #!
-
 import pandas as pd
 import os
 import pyargon2
@@ -17,9 +16,10 @@ import pickle
 from . import main_module
 from . import ad_hoc
 #!
+
 # read pickle containing data
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
-file_name = "2019_state_AZ_actions_taken_1_loan_types_1.pkl"
+file_name = "Changed 2019_state_AZ_actions_taken_1_loan_types_1.pkl"
 abs_path_to_data_pickle = os.path.join(PROJECT_ROOT, f"static/data/{file_name}").replace("\\", "/")
 original_data_frame = pd.read_pickle(abs_path_to_data_pickle)
 name_of_original_data_frame_variable = "original_data_frame"
@@ -33,14 +33,17 @@ with open(abs_path_to_password_dict_pickle, "rb") as password_dict_pickle:
 #set up secret_key for session
 app.secret_key = os.urandom(32)
 
-@app.route('/', methods=["GET", "POST"])
+# initialize plot_types
+plot_types = [plot_type.value for plot_type in main_module.PlotType]
+
+@app.route("/", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
         return login_user()
     else:
         return make_secure_response(render_template(
-            'login.html',
-            title='Login',
+            "login.html",
+            title="Login",
             year=datetime.now().year,
             message=""
         ))
@@ -49,10 +52,11 @@ def login_user():
     username = request.form.get("username")
 
     user_password_info = password_dict.get(username)
-    if (user_password_info is None):
+    
+    if user_password_info is None:
         return make_secure_response(render_template(
-            'login.html',
-            title='Login',
+            "login.html",
+            title="Login",
             year=datetime.now().year,
             message="wrong username"
         ))
@@ -62,41 +66,93 @@ def login_user():
 
     password = request.form.get("password")
     
-    if compare_hash(pyargon2.hash(password, salt), hash):
+    #TEST IMPORTANT CHANGE : get rid of 'True or' when deploying!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    if True or compare_hash(pyargon2.hash(password, salt), hash):
         session["username"] = username
         return make_secure_response(redirect(url_for("home")))
     else:
         return make_secure_response(render_template(
-            'login.html',
-            title='Login',
+            "login.html",
+            title="Login",
             year=datetime.now().year,
             message="wrong password"
         ))
-    
 
-@app.route('/home')
+
+@app.route("/home")
 def home():
     """Renders the home page."""
     if "username" in session:
         return make_secure_response(render_template(
-            'index.html',
+            "index.html",
             year=datetime.now().year,
         ))
     else:
         return make_secure_response(redirect(url_for("login")))
 
-@app.route('/query', methods=["GET", "POST"])
+@app.route("/dashboard", methods=["GET", "POST"])
+def dashboard():
+    if "username" in session:
+        if request.method == "POST":
+            return make_dashboard_plots()
+        else:
+            default_plot_options = [
+                ad_hoc.PlotOption(main_module.PlotType.PIE, y_axis="derived_dwelling_category"),
+                ad_hoc.PlotOption(main_module.PlotType.BOXPLOT, x_axis="loan_purpose", y_axis="property_value"),
+                ad_hoc.PlotOption(main_module.PlotType.SCATTER, x_axis="property_value", y_axis="loan_amount"),
+            ]
+        
+            #TEST !!!!!!!!!!!!!!!!!!!!!! PCA !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            #pca_columns = ["loan_amount", "loan_to_value_ratio", "interest_rate", "rate_spread", "loan_term", "property_value", "income", "debt_to_income_ratio", ]
+            #pca_plot = main_module.make_PCA_plot(original_data_frame, pca_columns)
+
+            return make_secure_response(render_template(
+                "dashboard.html",
+                title='Dashboard',
+                year=datetime.now().year,
+                message="",
+                default_plot_options=default_plot_options,
+                #pca_plot=pca_plot,
+                table_info=table_info,
+                plot_types=plot_types,
+            ))
+    else:
+        return make_secure_response(redirect(url_for("login")))
+
+#TODO
+def make_dashboard_plots():
+    plot_options = []
+    
+    # must do this to check if first row is None before starting while loop
+    plot_type = request.form.get(f"plotType0")
+    loop_limit = 100
+    row_index = 0
+    while (row_index < loop_limit):
+        plot_type = request.form.get(f"plotType{row_index}")
+        x_axis = request.form.get(f"xAxis{row_index}")
+        y_axis = request.form.get(f"yAxis{row_index}")
+        # must make plot_type upper case to get enum value
+        if plot_type is not None:
+            plot_options.append(ad_hoc.PlotOption(main_module.PlotType[plot_type.upper()], x_axis=x_axis, y_axis=y_axis))
+        row_index += 1
+
+    dash_board_plots = main_module.make_dashboard_plots(original_data_frame, plot_options)
+    return make_secure_response(render_template_string(dash_board_plots))
+
+@app.route("/query", methods=["GET", "POST"])
 def query():
     if "username" in session:
         if request.method == "POST":
-            return make_secure_response(do_query())
+            return do_query()
         else:
+
             return make_secure_response(render_template(
-                'query.html',
-                title='Query',
+                "query.html",
+                title="Query",
                 year=datetime.now().year,
-                message='Your query page.',
-                table_info=table_info
+                message="",
+                table_info=table_info,
+                plot_types=plot_types
             ))
     else:
         return make_secure_response(redirect(url_for("login")))
@@ -136,6 +192,7 @@ def do_query():
 @app.route("/plot", methods=["POST"])
 def make_plot():
     if "username" in session:
+        plot_type = request.form.get("plotType")
         x_axis = request.form.get("xAxis")
         y_axis = request.form.get("yAxis")
 
@@ -145,7 +202,7 @@ def make_plot():
         sql_query =  ad_hoc.SqlSelectQuery(table_columns, where_condition, None)
         try:
             df = ad_hoc.query_data_frame(sql_query, original_data_frame, abs_path_to_data_pickle)
-            plot = main_module.make_plot(df, x_axis, y_axis)
+            plot = main_module.make_dashboard_plots(df, plot_options=[ad_hoc.PlotOption(main_module.PlotType[plot_type.upper()], x_axis, y_axis)])
         except SyntaxError as error:
             plot =  f"<h3> {str(error)} </h3>"
         return make_secure_response(render_template_string(plot))
@@ -153,7 +210,7 @@ def make_plot():
     else:
         return make_secure_response(redirect(url_for("login")))
 
-@app.route('/calculate', methods=["GET", "POST"])
+@app.route("/calculate", methods=["GET", "POST"])
 def calculate():
     if "username" in session:
         if request.method == "POST":
@@ -171,9 +228,9 @@ def calculate():
             ]
             return make_secure_response(render_template(
                 "calculate.html",
-                title='Calculate',
+                title="Calculate",
                 year=datetime.now().year,
-                message='Your calculate page.',
+                message="",
                 options=options,
              ))
     else:
@@ -182,24 +239,22 @@ def calculate():
 def do_calculate():
         x_axis = "income"
         y_axis = "loan_amount"
-
-        table_columns = []
         
         user_income = ad_hoc.parse_numerical_expression(request.form.get("userIncome"))
-
+        
+        table_columns = []
         table_column = request.form.get("tableColumns0")
         table_column_index = 0
         while table_column is not None:
             table_columns.append(table_column)
             table_column_index += 1
-            table_column = request.form.get("tableColumns" + str(table_column_index))
+            table_column = request.form.get(f"tableColumns{table_column_index}")
         where_condition = ad_hoc.get_where_condition(request, name_of_original_data_frame_variable)
         sql_query =  ad_hoc.SqlSelectQuery(table_columns, where_condition, None)
         try:
             df = ad_hoc.query_data_frame(sql_query, original_data_frame, abs_path_to_data_pickle)
-            plot = main_module.make_plot(df, x_axis, y_axis, user_income)
-        except Exception as error:
-            raise error
+            plot = main_module.make_regression_plot(df, x_axis, y_axis, user_income)
+        except SyntaxError as error:
             plot =  f"<h3> {str(error)} </h3>"
         return make_secure_response(render_template_string(plot))
 
@@ -210,8 +265,8 @@ def logout():
 
 def make_secure_response(template):
     response = make_response(template)
-    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-    response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
-    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
     return response

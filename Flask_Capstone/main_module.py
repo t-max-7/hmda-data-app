@@ -1,5 +1,6 @@
 
 import os.path
+from enum import Enum
 
 import base64
 from io import BytesIO
@@ -11,185 +12,45 @@ from matplotlib import rcParams
 
 import numpy as np
 
-from sklearn.model_selection import KFold
+
 from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.pipeline import Pipeline
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, r2_score
 
 import sklearn.cluster as cluster
 
-def main(csv_data):
-    loan_data = csv_data[["census_tract", "derived_dwelling_category", "purchaser_type", "loan_purpose", "business_or_commercial_purpose",
-        "loan_amount", "loan_to_value_ratio", "interest_rate", "rate_spread", "total_loan_costs", "total_points_and_fees", "origination_charges", "discount_points",
-        "lender_credits", "loan_term", "prepayment_penalty_term", "intro_rate_period", "property_value", "income", "debt_to_income_ratio", "applicant_age"]]
-
-    # * 1
-    loan_amount_vs_interest_rate = loan_data[
-        (loan_data["census_tract"] == 4013010101) &
-        (loan_data["derived_dwelling_category"] == "Single Family (1-4 Units):Site-Built") & 
-        (loan_data["purchaser_type"] > -1_000) & 
-        (loan_data["loan_purpose"] == 1) &
-        (loan_data["business_or_commercial_purpose"] == 2) &
-        (loan_data["loan_amount"] < 1_000_000) &
-        (loan_data["loan_to_value_ratio"] > -1_000) &
-        (loan_data["interest_rate"] > -1000) &
-        (loan_data["income"] < 500) &
-        (loan_data["debt_to_income_ratio"] > 30)]
-    loan_amount_vs_interest_rate = loan_amount_vs_interest_rate[["loan_amount", "interest_rate"]].astype({"loan_amount": "int32"})
-    
-     # !!!!!!!!!!!!!!!!!!!!!!!!!!! REGRESSION
-    XX = pd.DataFrame(loan_amount_vs_interest_rate["loan_amount"])
-    YY = pd.DataFrame(loan_amount_vs_interest_rate["interest_rate"])
-
-    # PLOTS SCATTER GRAPH UPON WHICH TO BASE REGRESSION
-    fig = Figure()
-    ax = fig.subplots()
-    ax.scatter(XX, YY)
-    buf = BytesIO()
-    fig.savefig(buf, format="png")
-    data = base64.b64encode(buf.getbuffer()).decode("ascii")
-    yield f"<img src='data:image/png;base64,{data}'/>"
-
-    model = Pipeline([('poly', PolynomialFeatures(degree=1)), ('linear', LinearRegression(fit_intercept=False))])
-    scores = []
-    kfold = KFold(n_splits=2, shuffle=True, random_state=42)
-    for i, (train, test) in enumerate(kfold.split(XX, YY)):
-        model.fit(XX.iloc[train,:], YY.iloc[train,:])
-        score = model.score(XX.iloc[test,:], YY.iloc[test,:])
-        scores.append(score)
-    print(scores)
-
-    YY_pred = model.predict(XX)
-
-    ax.plot(XX, YY_pred, label="regression", color="red")
-    ax.set_xlabel("loan_amount")
-    ax.set_ylabel("interest_rate")
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
 
 
-    # * 2
-    loan_amount_vs_income = loan_data[
-        (loan_data["census_tract"] == 4013010101) &
-        (loan_data["derived_dwelling_category"] == "Single Family (1-4 Units):Site-Built") & 
-        (loan_data["purchaser_type"] > -1_000) & 
-        (loan_data["loan_purpose"] == 1) &
-        (loan_data["business_or_commercial_purpose"] == 2) &
-        (loan_data["loan_amount"] < 1_000_000) &
-        (loan_data["loan_to_value_ratio"] > -1_000) &
-        (loan_data["interest_rate"] > -1000) &
-        (loan_data["income"] < 500) &
-        (loan_data["debt_to_income_ratio"] > 30)]
-    loan_amount_vs_income = loan_amount_vs_income[["loan_amount", "income"]].astype({"loan_amount": "int32"})
-    #loan_amount_vs_income.plot.scatter(x="loan_amount", y="income")
-
-    # 3
-    loan_amount_vs_loan_to_value_ratio =  loan_data[
-        (loan_data["census_tract"] == 4013010101) &
-        (loan_data["derived_dwelling_category"] == "Single Family (1-4 Units):Site-Built") & 
-        (loan_data["purchaser_type"] > -1_000) & 
-        (loan_data["loan_purpose"] == 1) &
-        (loan_data["business_or_commercial_purpose"] == 2) &
-        (loan_data["loan_amount"] < 1_000_000) &
-        (loan_data["loan_to_value_ratio"] > -1_000) &
-        (loan_data["interest_rate"] > -1000) &
-        (loan_data["income"] < 500) &
-        (loan_data["debt_to_income_ratio"] > 30)]
-    loan_amount_vs_loan_to_value_ratio = loan_amount_vs_loan_to_value_ratio[["loan_amount", "loan_to_value_ratio"]].astype({"loan_amount": "int32"})
-    #loan_amount_vs_loan_to_value_ratio.plot.scatter(x="loan_amount", y="loan_to_value_ratio")
-
-    #4
-    income_vs_loan_to_value_ratio =  loan_data[
-        (loan_data["census_tract"] == 4013010101) &
-        (loan_data["derived_dwelling_category"] == "Single Family (1-4 Units):Site-Built") & 
-        (loan_data["purchaser_type"] > -1_000) & 
-        (loan_data["loan_purpose"] == 1) &
-        (loan_data["business_or_commercial_purpose"] == 2) &
-        (loan_data["loan_amount"] < 1_000_000) &
-        (loan_data["loan_to_value_ratio"] > -1_000) &
-        (loan_data["interest_rate"] > -1000) &
-        (loan_data["income"] < 500) &
-        (loan_data["debt_to_income_ratio"] > 30)]
-    income_vs_loan_to_value_ratio = income_vs_loan_to_value_ratio[["income", "loan_to_value_ratio"]]
-    #income_vs_loan_to_value_ratio.plot.scatter(x="income", y="loan_to_value_ratio")
-
-    #5
-    income_vs_property_value = loan_data[
-        (loan_data["census_tract"] == 4013010101) &
-        (loan_data["derived_dwelling_category"] == "Single Family (1-4 Units):Site-Built") & 
-        (loan_data["purchaser_type"] > -1_000) & 
-        (loan_data["loan_purpose"] == 1) &
-        (loan_data["business_or_commercial_purpose"] == 2) &
-        (loan_data["loan_amount"] < 1_000_000) &
-        (loan_data["loan_to_value_ratio"] > -1_000) &
-        (loan_data["interest_rate"] > -1000) &
-        (loan_data["income"] < 500) &
-        (loan_data["debt_to_income_ratio"] > 30)]
-    income_vs_property_value = income_vs_property_value[["income", "property_value", "debt_to_income_ratio"]]
-
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!! REGRESSION
-    XX = pd.DataFrame(income_vs_property_value["income"])
-    YY = pd.DataFrame(income_vs_property_value["property_value"])
-
-    # PLOTS SCATTER GRAPH UPON WHICH TO BASE REGRESSION
-   
-    #regression
-    model = Pipeline([('poly', PolynomialFeatures(degree=1)), ('linear', LinearRegression(fit_intercept=False))])
-    scores = []
-    kfold = KFold(n_splits=2, shuffle=True, random_state=42)
-    for i, (train, test) in enumerate(kfold.split(XX, YY)):
-        model.fit(XX.iloc[train,:], YY.iloc[train,:])
-        score = model.score(XX.iloc[test,:], YY.iloc[test,:])
-        scores.append(score)
-    print(scores)
-
-    YY_pred = model.predict(XX)
-    #
-
-    
-
-    fig = Figure()
-    ax = fig.subplots()
-    
-    #Kmeans
-    cluster_y_pred = cluster.KMeans(n_clusters=2).fit_predict(XX, YY)
-    ax.scatter(XX, YY, c=cluster_y_pred)
-    #
-
-    #regression
-    ax.plot(XX, YY_pred, label="regression", color="red")
-    
-    ax.set_xlabel("income")
-    ax.set_ylabel("property_value")
-
-    buf = BytesIO()
-    fig.savefig(buf, format="png")
-    data = base64.b64encode(buf.getbuffer()).decode("ascii")
-    yield f"<img src='data:image/png;base64,{data}'/>"
-
-
-def make_plot(data_frame, x_axis, y_axis, user_point_x=None):
+def make_regression_plot(data_frame, x_axis, y_axis, user_point_x=None):
     df = data_frame[[x_axis, y_axis]].dropna()
-    XX = pd.DataFrame(df[x_axis])
-    YY = pd.DataFrame(df[y_axis])
+    x_df = pd.DataFrame(df[x_axis])
+    y_df = pd.DataFrame(df[y_axis])
 
     # finds regression
     should_do_user_point = False
     try:
-        model = Pipeline([('poly', PolynomialFeatures(degree=1)), ('linear', LinearRegression(fit_intercept=False))])
-        scores = []
-        kfold = KFold(n_splits=2, shuffle=True, random_state=42)
-        for i, (train, test) in enumerate(kfold.split(XX, YY)):
-            model.fit(XX.iloc[train,:], YY.iloc[train,:])
-            score = model.score(XX.iloc[test,:], YY.iloc[test,:])
-            scores.append(score)
-        YY_pred = model.predict(XX)
+        model = LinearRegression()
         
+        # splits data with random state set to an integer, and shuffle to false for reproducible output across multiple function calls.
+        x_df_train, x_df_test, y_df_train, y_df_test = train_test_split(x_df, y_df, random_state=10, shuffle=False)
+        model.fit(x_df_train, y_df_train)
+        
+        y_df_test_pred = model.predict(x_df_test)
+       
         #user_point_x prediction
         if user_point_x is not None: 
             should_do_user_point = True
+
+        the_mean_squared_error = mean_squared_error(y_df_test, y_df_test_pred)
+        the_variance_score = r2_score(y_df_test, y_df_test_pred)
+        y_df_pred = model.predict(x_df)
     # when there is less than 2 samples then can't do regression:
     except ValueError:
-        YY_pred = YY
+        the_mean_squared_error = "NA"
+        the_variance_score = "Na"
+        y_df_pred = y_df
         
     
     # creates figure
@@ -198,29 +59,129 @@ def make_plot(data_frame, x_axis, y_axis, user_point_x=None):
     ax.set_xlabel(x_axis)
     ax.set_ylabel(y_axis)
 
-    #Kmeans
-    try:
-        cluster_y_pred = cluster.KMeans(n_clusters=2).fit_predict(XX, YY)
-        #plots data points colored according to assigned cluster
-        ax.scatter(XX, YY, c=cluster_y_pred)
-    #when there is less than 2 samples then can't do cluster:
-    except ValueError:
-        #plots data points
-        ax.scatter(XX,YY)
-    #
+    ##Kmeans
+    #try:
+    #    cluster_y_pred = cluster.KMeans(n_clusters=2).fit_predict(x_df, y_df)
+    #    #plots data points colored according to assigned cluster
+    #    ax.scatter(x_df, y_df, c=cluster_y_pred)
+    ##when there is less than 2 samples then can't do cluster:
+    #except ValueError:
+    #    #plots data points
+    #    ax.scatter(x_df, y_df)
+    ##
+    
+    # Replaces Kmeans !!!!!!!!!!!!!!!!!!!!!
+    # plots scatter
+    ax.scatter(x_df, y_df)
 
-    #plot regression
-    ax.plot(XX, YY_pred, label="regression", color="red")
+    #plots regression
+    ax.plot(x_df, y_df_pred, label="regression", color="red")
+
     
-    
+    #creates data for html image tag
     buf = BytesIO()
     fig.savefig(buf, format="png")
     data = base64.b64encode(buf.getbuffer()).decode("ascii")
 
     if should_do_user_point:
         user_point_x = [[user_point_x]]
-        user_point_y_pred = model.predict(user_point_x)
-        return f"<img src='data:image/png;base64,{data}'/> <h2>recommended value is: {user_point_y_pred[0][0]}</h2>"
+        user_point_y_pred = model.predict(user_point_x)[0][0]
+        return (f"<img src='data:image/png;base64,{data}'/>" +
+                f"<h3>The recommended value is: ${user_point_y_pred}</h3>" +
+                f"<h3>The mean squared error is: {the_mean_squared_error}</h3>" +
+                f"<h3>The variance score is: {the_variance_score}</h3>")
+
     else:
         return f"<img src='data:image/png;base64,{data}'/>"
         
+
+def make_dashboard_plots(data_frame, plot_options):
+
+    # creates figure
+    fig_width = 8
+    fig_height = (8*len(plot_options))
+    fig = Figure(figsize=[fig_width, fig_height])
+    nrows = len(plot_options)
+    ncols = 1
+    axes = fig.subplots(nrows=nrows, ncols=ncols, squeeze=False)
+    
+    #because there is only 1 column there is only one column_index
+    column_index = 0
+    for row_index in range(nrows):
+        plot_option = plot_options[row_index]
+        plot_type = plot_option.plot_type
+        x_axis = plot_option.x_axis
+        y_axis = plot_option.y_axis
+        ax = axes[row_index][column_index]
+
+        if plot_type == PlotType.BAR:
+            df_bar = data_frame.groupby(x_axis).mean()
+            df_bar.plot.bar(y=y_axis, ax=ax, ylabel=f"mean {y_axis}", legend=False)
+        elif plot_type == PlotType.BOXPLOT:
+            df_boxplot = data_frame[[x_axis, y_axis]]
+            df_boxplot.boxplot(by=x_axis, ax=ax, showfliers=False)
+            ax.set_title("")
+            ax.set_xlabel(x_axis)
+            ax.set_ylabel(y_axis)
+        elif plot_type == PlotType.LINE:
+            data_frame.plot(x_axis, y_axis, ax=ax)
+        elif plot_type == PlotType.SCATTER:
+            #Birch cluster
+            df_scatter = data_frame[[x_axis, y_axis]].dropna()
+            
+            x_df = pd.DataFrame(df_scatter[x_axis])
+            y_df = pd.DataFrame(df_scatter[y_axis])
+            try:
+                cluster_y_pred = cluster.Birch(n_clusters=4).fit_predict(x_df, y_df)
+                #plots data points colored according to assigned cluster
+                ax.scatter(x_df, y_df, c=cluster_y_pred)
+                ax.set_xlabel(x_axis)
+                ax.set_ylabel(y_axis)
+            #when there is less than 2 samples then can't do cluster:
+            except ValueError as error:
+                #plots data points
+                df_scatter.plot.scatter(x_axis, y_axis, ax=ax)
+
+        elif plot_type == PlotType.PIE:
+            pie_df = data_frame.groupby(y_axis).size()
+            pie_df.plot.pie(y=y_axis, ax=ax, title=y_axis, legend=True, autopct="%1.1f%%", labels=None, explode=[0.1 for i in range(len(pie_df.index))] )
+                 
+    #creates data for html image tag
+    buf = BytesIO()
+    fig.savefig(buf, format="png")
+    data = base64.b64encode(buf.getbuffer()).decode("ascii")
+    return f"<img src='data:image/png;base64,{data}'/>"
+
+class PlotType(Enum):
+    BAR = "bar"
+    BOXPLOT = "boxplot"
+    LINE = "line"
+    PIE = "pie"
+    SCATTER = "scatter"
+   
+def make_PCA_plot(data_frame, columns):
+    df = data_frame[columns].dropna()
+    print(df.head())
+    scaler = StandardScaler()
+    scaled_data = scaler.fit_transform(df)
+    print(f"scaled: {scaled_data[:5]}")
+
+    pca= PCA()
+    X_pca = pca.fit_transform(scaled_data)
+    print(f"pca variance ratio{(pca.explained_variance_ratio_ * 100)}" +
+          f"\n pca singular_values_{pca.singular_values_}" +
+          f"\n pca n_features_{pca.n_features_}")
+
+    # creates figure
+    fig = Figure()
+    ax = fig.add_subplot(111, projection="3d")
+    ax.scatter(X_pca[:,0], X_pca[:,1], X_pca[:,2])
+    
+
+    #creates data for html image tag
+    buf = BytesIO()
+    fig.savefig(buf, format="png")
+    data = base64.b64encode(buf.getbuffer()).decode("ascii")
+
+    return f"<img src='data:image/png;base64,{data}'/>"
+
