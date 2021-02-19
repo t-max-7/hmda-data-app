@@ -22,6 +22,7 @@ import sklearn.cluster as cluster
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
+from sklearn import config_context
 
 def make_regression_plot(data_frame, x_axis, y_axis, user_point_x=None):
     df = data_frame[[x_axis, y_axis]].dropna()
@@ -126,13 +127,15 @@ def make_dashboard_plots(data_frame, plot_options):
         elif plot_type == PlotType.LINE:
             data_frame.plot(x_axis, y_axis, ax=ax)
         elif plot_type == PlotType.SCATTER:
-            #Birch cluster
+            #Drops na values so that sklearn can assume it is finite and speed up computation
             df_scatter = data_frame[[x_axis, y_axis]].dropna()
             
             x_df = pd.DataFrame(df_scatter[x_axis])
             y_df = pd.DataFrame(df_scatter[y_axis])
             try:
-                cluster_y_pred = cluster.Birch(n_clusters=4).fit_predict(x_df, y_df)
+                #Calculates Birch clusters 
+                with config_context(assume_finite=True):
+                    cluster_y_pred = cluster.KMeans(n_clusters=4).fit_predict(x_df, y_df)
                 #plots data points colored according to assigned cluster
                 ax.scatter(x_df, y_df, c=cluster_y_pred)
                 ax.set_xlabel(x_axis)
@@ -140,6 +143,7 @@ def make_dashboard_plots(data_frame, plot_options):
             #when there is less than 2 samples then can't do cluster:
             except ValueError as error:
                 #plots data points
+                raise error
                 df_scatter.plot.scatter(x_axis, y_axis, ax=ax)
 
         elif plot_type == PlotType.PIE:
