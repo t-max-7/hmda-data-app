@@ -62,18 +62,6 @@ def make_regression_plot(data_frame, x_axis, y_axis, user_point_x=None):
     ax.set_xlabel(x_axis)
     ax.set_ylabel(y_axis)
 
-    ##Kmeans
-    #try:
-    #    cluster_y_pred = cluster.KMeans(n_clusters=2).fit_predict(x_df, y_df)
-    #    #plots data points colored according to assigned cluster
-    #    ax.scatter(x_df, y_df, c=cluster_y_pred)
-    ##when there is less than 2 samples then can't do cluster:
-    #except ValueError:
-    #    #plots data points
-    #    ax.scatter(x_df, y_df)
-    ##
-    
-    # Replaces Kmeans !!!!!!!!!!!!!!!!!!!!!
     # plots scatter
     ax.scatter(x_df, y_df)
 
@@ -130,14 +118,13 @@ def make_dashboard_plots(data_frame, plot_options):
         elif plot_type == PlotType.LINE:
             data_frame.plot(x_axis, y_axis, ax=ax)
         elif plot_type == PlotType.SCATTER:
-            #Drops na values so that sklearn can assume it is finite and speed up computation
+            #Drops NA values
             df_scatter = data_frame[[x_axis, y_axis]].dropna()
             
             x_df = pd.DataFrame(df_scatter[x_axis])
             y_df = pd.DataFrame(df_scatter[y_axis])
             try:
-                #Calculates Birch clusters 
-                #TEST: with config_context(assume_finite=True):
+                #calculates Birch clusters 
                 cluster_y_pred = cluster.Birch(n_clusters=4).fit_predict(x_df, y_df)
                
 

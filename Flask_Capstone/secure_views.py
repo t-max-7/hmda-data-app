@@ -98,7 +98,7 @@ def dashboard():
             default_plot_options = [
                 ad_hoc.PlotOption(main_module.PlotType.PIE, y_axis="derived_dwelling_category"),
                 ad_hoc.PlotOption(main_module.PlotType.BOXPLOT, x_axis="loan_purpose", y_axis="property_value"),
-                ad_hoc.PlotOption(main_module.PlotType.SCATTER, x_axis="property_value", y_axis="loan_amount"),
+                ad_hoc.PlotOption(main_module.PlotType.SCATTER, x_axis="discount_points", y_axis="loan_amount"),
             ]
         
             #TEST !!!!!!!!!!!!!!!!!!!!!! PCA !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -118,7 +118,6 @@ def dashboard():
     else:
         return make_secure_response(redirect(url_for("login")))
 
-#TODO
 def make_dashboard_plots():
     plot_options = []
     
