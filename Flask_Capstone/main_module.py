@@ -24,6 +24,8 @@ from sklearn.preprocessing import StandardScaler
 
 from sklearn import config_context
 
+import time
+
 def make_regression_plot(data_frame, x_axis, y_axis, user_point_x=None):
     df = data_frame[[x_axis, y_axis]].dropna()
     x_df = pd.DataFrame(df[x_axis])
@@ -97,6 +99,7 @@ def make_regression_plot(data_frame, x_axis, y_axis, user_point_x=None):
         
 
 def make_dashboard_plots(data_frame, plot_options):
+    start_time = time.perf_counter()
 
     # creates figure
     fig_width = 8
@@ -134,12 +137,17 @@ def make_dashboard_plots(data_frame, plot_options):
             y_df = pd.DataFrame(df_scatter[y_axis])
             try:
                 #Calculates Birch clusters 
-                with config_context(assume_finite=True):
-                    cluster_y_pred = cluster.KMeans(n_clusters=4).fit_predict(x_df, y_df)
+                #TEST: with config_context(assume_finite=True):
+                cluster_y_pred = cluster.Birch(n_clusters=4).fit_predict(x_df, y_df)
+               
+
                 #plots data points colored according to assigned cluster
                 ax.scatter(x_df, y_df, c=cluster_y_pred)
                 ax.set_xlabel(x_axis)
                 ax.set_ylabel(y_axis)
+                
+                
+                
             #when there is less than 2 samples then can't do cluster:
             except ValueError as error:
                 #plots data points
@@ -154,6 +162,10 @@ def make_dashboard_plots(data_frame, plot_options):
     buf = BytesIO()
     fig.savefig(buf, format="png")
     data = base64.b64encode(buf.getbuffer()).decode("ascii")
+    
+    end_time = time.perf_counter()
+    print(f"took {end_time - start_time:0.4f} seconds")
+    
     return f"<img src='data:image/png;base64,{data}'/>"
 
 class PlotType(Enum):
