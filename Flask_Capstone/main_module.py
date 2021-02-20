@@ -124,8 +124,8 @@ def make_dashboard_plots(data_frame, plot_options):
             x_df = pd.DataFrame(df_scatter[x_axis])
             y_df = pd.DataFrame(df_scatter[y_axis])
             try:
-                #calculates Birch clusters 
-                cluster_y_pred = cluster.Birch(n_clusters=4).fit_predict(x_df, y_df)
+                #calculates KMeans clusters 
+                cluster_y_pred = cluster.KMeans(n_clusters=4).fit_predict(x_df, y_df)
                
 
                 #plots data points colored according to assigned cluster
