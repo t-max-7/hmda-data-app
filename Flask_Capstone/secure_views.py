@@ -7,17 +7,15 @@ from datetime import datetime
 from flask import make_response, redirect, render_template, render_template_string, request, session, url_for
 from Flask_Capstone import app
 
-#!
 import pandas as pd
 import os
 import pyargon2
 from hmac import compare_digest as compare_hash
 import pickle
-from . import main_module
+from . import plot_module
 from . import ad_hoc
-#!
 
-# read pickle containing data
+# Reads the pickle containing the data for the application
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 file_name = "Changed 2019_state_AZ_actions_taken_1_loan_types_1.pkl"
 abs_path_to_data_pickle = os.path.join(PROJECT_ROOT, f"static/data/{file_name}").replace("\\", "/")
@@ -25,16 +23,16 @@ original_data_frame = pd.read_pickle(abs_path_to_data_pickle)
 name_of_original_data_frame_variable = "original_data_frame"
 table_info = ad_hoc.TableInfo(file_name, original_data_frame.columns.format())
 
-#read pickle containing passwords
+# Reads the pickle containing the passwords for the application
 abs_path_to_password_dict_pickle = os.path.join(PROJECT_ROOT, "static/data/password_dict.pkl").replace("\\", "/")
 with open(abs_path_to_password_dict_pickle, "rb") as password_dict_pickle:
     password_dict = pickle.load(password_dict_pickle)
 
-#set up secret_key for session
+# Sets up the secret_key for the session
 app.secret_key = os.urandom(32)
 
-# initialize plot_types
-plot_types = [plot_type.value for plot_type in main_module.PlotType]
+# Initializes plot_types
+plot_types = [plot_type.value for plot_type in plot_module.PlotType]
 
 @app.route("/", methods=["GET", "POST"])
 def login():
@@ -96,14 +94,14 @@ def dashboard():
             return make_dashboard_plots()
         else:
             default_plot_options = [
-                ad_hoc.PlotOption(main_module.PlotType.PIE, y_axis="derived_dwelling_category"),
-                ad_hoc.PlotOption(main_module.PlotType.BOXPLOT, x_axis="loan_purpose", y_axis="property_value"),
-                ad_hoc.PlotOption(main_module.PlotType.SCATTER, x_axis="discount_points", y_axis="loan_amount"),
+                ad_hoc.PlotOption(plot_module.PlotType.PIE, y_axis="derived_dwelling_category"),
+                ad_hoc.PlotOption(plot_module.PlotType.BOXPLOT, x_axis="loan_purpose", y_axis="property_value"),
+                ad_hoc.PlotOption(plot_module.PlotType.SCATTER, x_axis="discount_points", y_axis="loan_amount"),
             ]
         
             #TEST !!!!!!!!!!!!!!!!!!!!!! PCA !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             #pca_columns = ["loan_amount", "loan_to_value_ratio", "interest_rate", "rate_spread", "loan_term", "property_value", "income", "debt_to_income_ratio", ]
-            #pca_plot = main_module.make_PCA_plot(original_data_frame, pca_columns)
+            #pca_plot = plot_module.make_PCA_plot(original_data_frame, pca_columns)
 
             return make_secure_response(render_template(
                 "dashboard.html",
@@ -121,7 +119,7 @@ def dashboard():
 def make_dashboard_plots():
     plot_options = []
     
-    # must do this to check if first row is None before starting while loop
+    # Must do this to check if the first row is None before starting the while loop
     plot_type = request.form.get(f"plotType0")
     loop_limit = 100
     row_index = 0
@@ -129,12 +127,12 @@ def make_dashboard_plots():
         plot_type = request.form.get(f"plotType{row_index}")
         x_axis = request.form.get(f"xAxis{row_index}")
         y_axis = request.form.get(f"yAxis{row_index}")
-        # must make plot_type upper case to get enum value
+        # Must make plot_type upper case to get enum value
         if plot_type is not None:
-            plot_options.append(ad_hoc.PlotOption(main_module.PlotType[plot_type.upper()], x_axis=x_axis, y_axis=y_axis))
+            plot_options.append(ad_hoc.PlotOption(plot_module.PlotType[plot_type.upper()], x_axis=x_axis, y_axis=y_axis))
         row_index += 1
 
-    dash_board_plots = main_module.make_dashboard_plots(original_data_frame, plot_options)
+    dash_board_plots = plot_module.make_dashboard_plots(original_data_frame, plot_options)
     return make_secure_response(render_template_string(dash_board_plots))
 
 @app.route("/query", methods=["GET", "POST"])
@@ -162,7 +160,7 @@ def do_query():
    
         if query_type == "SELECT":
             table_columns = request.form.getlist("tableColumns")
-            #table_to_select_from = request.form.get("tableToSelectFrom")
+            # MIGHT BE USEFULE IN THE FUTURE: table_to_select_from = request.form.get("tableToSelectFrom")
             limit = int(request.form.get("limit"))        
             where_condition = ad_hoc.get_where_condition(request, name_of_original_data_frame_variable)
             sql_query =  ad_hoc.SqlSelectQuery(table_columns, where_condition, limit)
@@ -172,7 +170,7 @@ def do_query():
             except SyntaxError as error:
                 result = f"<h3> {str(error)} </h3>"
         elif query_type == "UPDATE":
-            #table_to_update = request.form.get("tableToUpdate")
+            # MIGHT BE USEFUL IN THE FUTURE: table_to_update = request.form.get("tableToUpdate")
             table_columns = request.form.getlist("tableColumns")
             set_expression = request.form.get("setExpression")
             where_condition = ad_hoc.get_where_condition(request, name_of_original_data_frame_variable)
@@ -195,12 +193,12 @@ def make_plot():
         y_axis = request.form.get("yAxis")
 
         table_columns = request.form.getlist("tableColumns")
-        #table_to_select_from = request.form.get("tableToSelectFrom")
+        # MIGHT BE USEFUL IN THE FUTURE: table_to_select_from = request.form.get("tableToSelectFrom")
         where_condition = ad_hoc.get_where_condition(request, name_of_original_data_frame_variable)
         sql_query =  ad_hoc.SqlSelectQuery(table_columns, where_condition, None)
         try:
             df = ad_hoc.query_data_frame(sql_query, original_data_frame, abs_path_to_data_pickle)
-            plot = main_module.make_dashboard_plots(df, plot_options=[ad_hoc.PlotOption(main_module.PlotType[plot_type.upper()], x_axis, y_axis)])
+            plot = plot_module.make_dashboard_plots(df, plot_options=[ad_hoc.PlotOption(plot_module.PlotType[plot_type.upper()], x_axis, y_axis)])
         except SyntaxError as error:
             plot =  f"<h3> {str(error)} </h3>"
         return make_secure_response(render_template_string(plot))
@@ -215,14 +213,12 @@ def calculate():
             return do_calculate()
         else:
             options = [
-                ad_hoc.CalculateOption("census_tract", "=", None, False),
-                ad_hoc.CalculateOption("derived_dwelling_category", "=", "\"Single Family (1-4 Units):Site-Built\"", True),
-                ad_hoc.CalculateOption("loan_purpose", "=", "1", True),
-                ad_hoc.CalculateOption("loan_amount", "<", "1_000_000", True),
-                ad_hoc.CalculateOption("income", "<", "100", True),
-                ad_hoc.CalculateOption("debt_to_income_ratio", "<", "100", True),
-                ad_hoc.CalculateOption("debt_to_income_ratio", ">", "0", True),
-                ad_hoc.CalculateOption("property_value", "<", "1_000_000", True),
+                ad_hoc.CalculateOption("census_tract", "=", default_value=None, hidden=False),
+                ad_hoc.CalculateOption("loan_amount", "<", "1_000_000", hidden=True),
+                ad_hoc.CalculateOption("property_value", "<", "1_000_000", hidden=True),
+                ad_hoc.CalculateOption("income", "<", "100", hidden=True),
+                ad_hoc.CalculateOption("interest_rate", "<", "90", hidden=True),
+                ad_hoc.CalculateOption("loan_to_value_ratio", "<", "110", hidden=True), 
             ]
             return make_secure_response(render_template(
                 "calculate.html",
@@ -251,7 +247,13 @@ def do_calculate():
         sql_query =  ad_hoc.SqlSelectQuery(table_columns, where_condition, None)
         try:
             df = ad_hoc.query_data_frame(sql_query, original_data_frame, abs_path_to_data_pickle)
-            plot = main_module.make_regression_plot(df, x_axis, y_axis, user_income)
+            plot = plot_module.make_regression_plot(df, x_axis, y_axis, user_income)
+            #TEST !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            # plot_module.estimate_overall_accuracy(df, x_axis, y_axis, "census_tract", [
+            #     "04001970502", "04003001100", "04005000100", "04007000301", "04009961100", "04011960300", 
+            #     "04012020501", "04013050702", "04015950500", "04017964202", "04019002400",
+            #     "04021000204", "04023966402", "04025000604", "04027011501"
+            # ])
         except SyntaxError as error:
             plot =  f"<h3> {str(error)} </h3>"
         return make_secure_response(render_template_string(plot))
@@ -268,3 +270,4 @@ def make_secure_response(template):
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     return response
+

@@ -4,7 +4,7 @@
 <h2>{{ title }}</h2>
 <h3>{{ message }}</h3>
 
-<p></p>
+<p>The definitions and values of the table columns are found <a href="https://ffiec.cfpb.gov/documentation/2019/lar-data-fields/">here</a></p>
 
 <form class="container" id="sqlQueryForm">
 	<div id="sqlQueryDiv">
@@ -104,7 +104,7 @@
 				tableColumnsSelect.multiple = true;
 				tableColumnsSelect.required = true;
 				tableColumnsSelect.id = "select_TableColumnsSelect";
-				//add options from tableColumns to tableColumnsSelect
+				//adds options from tableColumns to tableColumnsSelect
 				const tableColumns = {{ table_info.column_names|safe }};//python variable
 				for (const tableColumn of tableColumns) {
 					const option = document.createElement("option");
@@ -120,7 +120,7 @@
 				//fromLabel
 				sqlQueryDivRow1.appendChild(makeLabel("tableColumnsSelect", "fromLabel", "FROM"))
 
-				// //tableToSelectFromDivCol
+				//tableToSelectFromDivCol
 				const tableToSelectFromDivCol = document.createElement("div");
 				tableToSelectFromDivCol.className = "col-sm-7";
 				tableToSelectFromDivCol.id = "tableToSelectFromDivCol"
@@ -139,7 +139,7 @@
 				//addWhereConditionButton
 				sqlQueryDivRow2.appendChild(makeAddWhereConditionButton())
 
-				//populate limitDivRow
+				//populates limitDivRow
 				const limitNumberInput = document.createElement("input")
 				limitNumberInput.type = "number"
 				limitNumberInput.className = "col-sm-2"
@@ -223,7 +223,7 @@
 		tableColumnsSelect.required = true;
 		tableColumnsSelect.id = "tableColumnsSelect";
 
-		//add options from tableColumns to tableColumnsSelect
+		//adds options from tableColumns to tableColumnsSelect
 		const tableColumns = {{ table_info.column_names|safe }};//python variable
 		for (const tableColumn of tableColumns) {
 			const option = document.createElement("option");
@@ -450,7 +450,7 @@
 			yAxisSelect.removeChild(yAxisSelect.firstChild)
 		}
 
-		// add column options
+		// adds column options
 		const selectedTableColumns = Array.from(document.querySelector("#select_TableColumnsSelect").selectedOptions).map(o => o.value);
 		for (const tableColumn of selectedTableColumns) {
 			xOption = document.createElement("option");

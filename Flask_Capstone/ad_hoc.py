@@ -42,18 +42,17 @@ def query_data_frame(sql_query, original_data_frame, file_path):
 
             where_condition = sql_query.where_condition
             if where_condition != "":
-                # updates data_frame according to the expression
+                # Updates data_frame according to the expression
                 original_data_frame.loc[eval(where_condition), table_columns] = parse_numerical_expression(set_expression)
                 df = original_data_frame.loc[eval(where_condition), table_columns].head(arbitrary_limit)
             else:
-                # updates data_frame according to the expression
+                # Updates data_frame according to the expression
                 original_data_frame.loc[:, table_columns] = set_expression
                 df = original_data_frame.loc[:, table_columns].head(arbitrary_limit)
-            #saves to pickle file
+            #Saves to pickle file
             original_data_frame.to_pickle(file_path)
         return df #a dataframe
     except (SyntaxError, NameError) as e:
-        #TEST raise e
         raise SyntaxError("Error: at least one of the where conditions contains a syntax error." +
                           "\n" +
                           "If the value is a string it must be enclosed in quotes e.g. \"some string\"."
@@ -79,7 +78,7 @@ def get_where_condition(request, name_of_original_data_frame_variable):
             relational_operator = request.form.get(f"relationalOperator{row_index}")
             right_operand =  parse_numerical_expression(request.form.get(f"rightOperand{row_index}"))
             logical_operator = request.form.get(f"logicalOperator{row_index}")
-            #IMPORTANT: IF CHANGE VARIABLE NAME OF VARIABLE original_data_frame IN routes.py THIS WILL NOT WORK !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
+            #IMPORTANT: IF YOU CHANGE THE VARIABLE NAME OF VARIABLE original_data_frame IN routes.py THIS WILL NOT WORK !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
             where_condition = where_condition + f"({name_of_original_data_frame_variable}[\"{table_column_for_where_condition}\"] {relational_operator} {right_operand}) {logical_operator} "
         row_index += 1
 
