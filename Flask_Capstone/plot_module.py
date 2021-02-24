@@ -163,8 +163,6 @@ def make_dashboard_plots(data_frame, plot_options):
                 
             # When there is less than 2 samples then can't do cluster:
             except ValueError as error:
-                # Plots data points
-                raise error
                 df_scatter.plot.scatter(x_axis, y_axis, ax=ax)
 
         elif plot_type == PlotType.PIE:
