@@ -91,7 +91,7 @@ def home():
 def dashboard():
     if "username" in session:
         if request.method == "POST":
-            return make_dashboard_plots()
+            return make_dashboard_plot()
         else:
             default_plot_options = [
                 ad_hoc.PlotOption(plot_module.PlotType.PIE, y_axis="derived_dwelling_category"),
@@ -116,24 +116,15 @@ def dashboard():
     else:
         return make_secure_response(redirect(url_for("login")))
 
-def make_dashboard_plots():
-    plot_options = []
-    
+def make_dashboard_plot():
     # Must do this to check if the first row is None before starting the while loop
-    plot_type = request.form.get(f"plotType0")
-    loop_limit = 100
-    row_index = 0
-    while (row_index < loop_limit):
-        plot_type = request.form.get(f"plotType{row_index}")
-        x_axis = request.form.get(f"xAxis{row_index}")
-        y_axis = request.form.get(f"yAxis{row_index}")
-        # Must make plot_type upper case to get enum value
-        if plot_type is not None:
-            plot_options.append(ad_hoc.PlotOption(plot_module.PlotType[plot_type.upper()], x_axis=x_axis, y_axis=y_axis))
-        row_index += 1
-
-    dash_board_plots = plot_module.make_dashboard_plots(original_data_frame, plot_options)
-    return make_secure_response(render_template_string(dash_board_plots))
+    plot_type = request.form.get(f"plotType")
+    x_axis = request.form.get(f"xAxis")
+    y_axis = request.form.get(f"yAxis")
+   
+    plot_option = ad_hoc.PlotOption(plot_module.PlotType[plot_type.upper()], x_axis=x_axis, y_axis=y_axis)
+    dashboard_plot = plot_module.make_dashboard_plot(original_data_frame, plot_option)
+    return make_secure_response(render_template_string(dashboard_plot))
 
 @app.route("/query", methods=["GET", "POST"])
 def query():
@@ -198,7 +189,7 @@ def make_plot():
         sql_query =  ad_hoc.SqlSelectQuery(table_columns, where_condition, None)
         try:
             df = ad_hoc.query_data_frame(sql_query, original_data_frame, abs_path_to_data_pickle)
-            plot = plot_module.make_dashboard_plots(df, plot_options=[ad_hoc.PlotOption(plot_module.PlotType[plot_type.upper()], x_axis, y_axis)])
+            plot = plot_module.make_dashboard_plot(df, plot_options=[ad_hoc.PlotOption(plot_module.PlotType[plot_type.upper()], x_axis, y_axis)])
         except SyntaxError as error:
             plot =  f"<h3> {str(error)} </h3>"
         return make_secure_response(render_template_string(plot))
@@ -249,11 +240,11 @@ def do_calculate():
             df = ad_hoc.query_data_frame(sql_query, original_data_frame, abs_path_to_data_pickle)
             plot = plot_module.make_regression_plot(df, x_axis, y_axis, user_income)
             #TEST !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            # plot_module.estimate_overall_accuracy(df, x_axis, y_axis, "census_tract", [
-            #     "04001970502", "04003001100", "04005000100", "04007000301", "04009961100", "04011960300", 
-            #     "04012020501", "04013050702", "04015950500", "04017964202", "04019002400",
-            #     "04021000204", "04023966402", "04025000604", "04027011501"
-            # ])
+            #plot_module.estimate_overall_accuracy(df, x_axis, y_axis, "census_tract", [
+            #"04001970502", "04003001100", "04005000100", "04007000301", "04009961100", "04011960300", 
+            #"04012020501", "04013050702", "04015950500", "04017964202", "04019002400",
+            #"04021000204", "04023966402", "04025000604", "04027011501"
+            #])
         except SyntaxError as error:
             plot =  f"<h3> {str(error)} </h3>"
         return make_secure_response(render_template_string(plot))

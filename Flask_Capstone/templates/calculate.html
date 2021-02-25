@@ -14,7 +14,7 @@
 <form class="container" id="calculateForm" method="POST">
     <div class="input-group mb-3">
         <span class="input-group-text">income (in thousands)</span>
-        <input type="text" class="form-control" name="userIncome" />
+        <input type="text" class="form-control" required name="userIncome" />
     </div>
     {% for option in options %}
     {% if option.hidden %}
@@ -30,7 +30,7 @@
         <span class="input-group-text">{{ option.column_name }}</span>
         <input type="text" class="form-control" hidden name="tableColumns{{ loop.index0 }}" value="{{ option.column_name }}" />
         <input type="text" class="form-control" hidden name="relationalOperator{{ loop.index0 }}" value="{{ option.relational_operator }}" />
-        <input type="text" class="form-control" name="rightOperand{{ loop.index0 }}" />
+        <input type="text" class="form-control" required name="rightOperand{{ loop.index0 }}" />
         <input type="text" class="form-control" hidden name="logicalOperator{{ loop.index0 }}" value="AND" />
     </div>
     {% endif %}

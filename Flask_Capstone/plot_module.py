@@ -26,12 +26,17 @@ from sklearn import config_context
 
 import time
 
+class TooManyGroupsException(Exception):
+    pass
+
+GROUP_LIMIT_FOR_PLOTS = 20
+
 def make_regression_plot(data_frame, x_axis, y_axis, user_point_x=None):
     df = data_frame[[x_axis, y_axis]].dropna()
     x_df = pd.DataFrame(df[x_axis])
     y_df = pd.DataFrame(df[y_axis])
 
-    # Finds regression
+    # Finds regression.
     is_error = False
     try:
         model = LinearRegression()
@@ -48,7 +53,8 @@ def make_regression_plot(data_frame, x_axis, y_axis, user_point_x=None):
         y_df_pred = model.predict(x_df)
 
     # When there is less than 2 samples then can't do regression:
-    except ValueError:
+    except (ValueError) as valueError:
+        print(valueError)
         is_error = True
        
     # Creates figure
@@ -77,7 +83,7 @@ def make_regression_plot(data_frame, x_axis, y_axis, user_point_x=None):
                 f"<h3>The recommended value is: ${user_point_y_pred}</h3>" +
                 f"<h3>The mean squared error is: {the_mean_squared_error}</h3>" +
                 f"<h3>The variance score is: {the_variance_score}</h3>")
-    else:
+    else: 
         return (f"<img src='data:image/png;base64,{data}'/>" + 
                 f"<h3>There is not enough data with the given characteristics to create the regression</h3>")
             
@@ -115,69 +121,91 @@ def estimate_overall_accuracy(data_frame, x_axis, y_axis, column_name, values):
     print(f"average mean squared error: {average_mean_squared_error} \n" +
           f"average variance score: {average_variance_score}")
 
-def make_dashboard_plots(data_frame, plot_options):
+def make_dashboard_plot(data_frame, plot_option):
+    # Starts timer to see how long creating the plot takes
     start_time = time.perf_counter()
 
-    # Creates figure
-    fig_width = 8
-    fig_height = (8*len(plot_options))
-    fig = Figure(figsize=[fig_width, fig_height])
-    nrows = len(plot_options)
-    ncols = 1
-    axes = fig.subplots(nrows=nrows, ncols=ncols, squeeze=False)
+    plot_type = plot_option.plot_type
+    x_axis = plot_option.x_axis
+    y_axis = plot_option.y_axis
     
-    # Because there is only 1 column there is only one column_index
-    column_index = 0
-    for row_index in range(nrows):
-        plot_option = plot_options[row_index]
-        plot_type = plot_option.plot_type
-        x_axis = plot_option.x_axis
-        y_axis = plot_option.y_axis
-        ax = axes[row_index][column_index]
-
+    # Creates figure
+    fig = Figure()
+    ax = fig.subplots()
+   
+    too_many_groups = False
+    is_error = False
+    try:
         if plot_type == PlotType.BAR:
             df_bar = data_frame.groupby(x_axis).mean()
+            # Checks that plot will not contain too many groups. 
+            # This must be done to ensure a response time under 30 secondes.
+            if len(df_bar.index) > GROUP_LIMIT_FOR_PLOTS:
+                raise TooManyGroupsException()
             df_bar.plot.bar(y=y_axis, ax=ax, ylabel=f"mean {y_axis}", legend=False)
+
         elif plot_type == PlotType.BOXPLOT:
             df_boxplot = data_frame[[x_axis, y_axis]]
-            df_boxplot.boxplot(by=x_axis, ax=ax, showfliers=False)
-            ax.set_title("")
-            ax.set_xlabel(x_axis)
-            ax.set_ylabel(y_axis)
+            df_boxplot = df_boxplot.groupby(x_axis, as_index=False)
+            # Checks that plot will not contain to many groups. 
+            # This must be done to ensure a response time under 30 secondes.
+            if len(df_boxplot.groups) > GROUP_LIMIT_FOR_PLOTS:
+                raise TooManyGroupsException
+            df_boxplot.boxplot(column=y_axis, ax=ax, subplots=False, showfliers=False)
+
         elif plot_type == PlotType.LINE:
             data_frame.plot(x_axis, y_axis, ax=ax)
+
         elif plot_type == PlotType.SCATTER:
             # Drops NA values
             df_scatter = data_frame[[x_axis, y_axis]].dropna()
-            
+           
             x_df = pd.DataFrame(df_scatter[x_axis])
             y_df = pd.DataFrame(df_scatter[y_axis])
             try:
                 # Calculates KMeans clusters 
                 cluster_y_pred = cluster.KMeans(n_clusters=4).fit_predict(x_df, y_df)
-               
+              
                 # Plots data points colored according to assigned cluster
                 ax.scatter(x_df, y_df, c=cluster_y_pred)
                 ax.set_xlabel(x_axis)
                 ax.set_ylabel(y_axis)
-                
+               
             # When there is less than 2 samples then can't do cluster:
-            except ValueError as error:
+            except (TypeError, ValueError):
                 df_scatter.plot.scatter(x_axis, y_axis, ax=ax)
 
         elif plot_type == PlotType.PIE:
             pie_df = data_frame.groupby(y_axis).size()
+            # Checks that plot will not contain to many groups. 
+            # This must be done to ensure a response time under 30 secondes.
+            if len(pie_df.index) > GROUP_LIMIT_FOR_PLOTS:
+                raise TooManyGroupsException
             pie_df.plot.pie(y=y_axis, ax=ax, title=y_axis, legend=True, autopct="%1.1f%%", labels=None, explode=[0.1 for i in range(len(pie_df.index))] )
-                 
+
+    except TooManyGroupsException:
+        print("tmge")
+        too_many_groups = True
+    except Exception as error:
+        print(error)
+        is_error = True
+      
     # Creates data for html image tag
     buf = BytesIO()
     fig.savefig(buf, format="png")
     data = base64.b64encode(buf.getbuffer()).decode("ascii")
     
+    # Prints time taken
     end_time = time.perf_counter()
     print(f"took {end_time - start_time:0.4f} seconds")
     
-    return f"<img src='data:image/png;base64,{data}'/>"
+    if too_many_groups:
+        return f"<h2>The chosen plot takes too long to generate</h2>"
+    elif not is_error:
+        return f"<img src='data:image/png;base64,{data}'/>"
+    else:
+        return ("<h2>There was an error making this plot.</h2> \n" +
+                "<h2>Please review column types and values to determine if the plot type can be made using the chosen x-axis and y-axis</h2>")
 
 class PlotType(Enum):
     BAR = "bar"

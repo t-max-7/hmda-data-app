@@ -10,8 +10,8 @@
 {% for default_plot_option in default_plot_options %}
     <form method="POST" class="container" id="dashboardForm{{ loop.index0 }}">
         <div class="row">
-            <label for="plotTypeSelect{{ loop.index0 }}" class="col-sm-2 col-form-label">plot type</label>
-            <select class="col-sm-10" name="plotType{{ loop.index0 }}" id="plotTypeSelect{{ loop.index0 }}">
+            <label for="plotTypeSelect" class="col-sm-2 col-form-label">plot type</label>
+            <select class="col-sm-10" name="plotType" id="plotTypeSelect">
                 {% for plot_type in plot_types %}
                     {% if plot_type == default_plot_option.plot_type.value %}
                         <option value="{{ plot_type }}" selected>{{ plot_type }}</option>
@@ -23,8 +23,8 @@
         </div>
 
         <div class="row">
-            <label for="xAxisSelect{{ loop.index0 }}" class="col-sm-2 col-form-label">x-axis</label>
-            <select class="col-sm-10" name="xAxis{{ loop.index0 }}" id="xAxisSelect{{ loop.index0 }}">
+            <label for="xAxisSelect" class="col-sm-2 col-form-label">x-axis</label>
+            <select class="col-sm-10" name="xAxis" id="xAxisSelect">
                 {% for column_name in table_info.column_names %}
                     {% if column_name == default_plot_option.x_axis %}
                         <option value="{{ column_name }}" selected>{{ column_name }}</option>
@@ -36,8 +36,8 @@
         </div>
         
         <div class="row">
-            <label for="yAxisSelect{{ loop.index0 }}" class="col-sm-2 col-form-label">y-axis</label>
-            <select class="col-sm-10" name="yAxis{{ loop.index0 }}" id="yAxisSelect{{ loop.index0 }}">
+            <label for="yAxisSelect" class="col-sm-2 col-form-label">y-axis</label>
+            <select class="col-sm-10" name="yAxis" id="yAxisSelect">
                 {% for column_name in table_info.column_names %}
                     {% if column_name == default_plot_option.y_axis%}
                         <option value="{{ column_name }}" selected>{{ column_name }}</option>
@@ -84,10 +84,9 @@
 
         // gets plotsDiv's innerHTML from server
         fetchPlots()
-
-        
     })
 
+    //recursively submits a fetch request for each dashboardForm
     function fetchPlots() {
         formToSubmit = document.querySelector(("#dashboardForm" + submitIndex))
         fetch(formToSubmit.action, {
@@ -98,6 +97,7 @@
             .then((text) => { plotsDiv.innerHTML += text })
             .then(function () {
                 submitIndex += 1
+                console.log("submitIndex: " + submitIndex + "numberOfRequestsToSubmit: " + numberOfRequestsToSubmit)
                 if (submitIndex < numberOfRequestsToSubmit) {
                     fetchPlots()
                 } else {
@@ -107,7 +107,7 @@
                     dashboardSubmitButtonText.innerText = "Submit"
                     dashboardSubmitSpinner.hidden = true;
                 }
-            })
+            }).catch((error) => console.log(error));
     }
    
 
