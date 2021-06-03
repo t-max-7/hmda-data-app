@@ -11,6 +11,6 @@ app.config.update(
 )
 print(__name__)
 
-import Flask_Capstone.ad_hoc
-import Flask_Capstone.plot_module
-import Flask_Capstone.secure_views
+import hmda_data_app.ad_hoc
+import hmda_data_app.plot_module
+import hmda_data_app.secure_views
