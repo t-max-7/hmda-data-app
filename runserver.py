@@ -1,9 +1,9 @@
 """
-This script runs the Flask_Capstone application using a development server.
+This script runs the hmda data application using a development server.
 """
 
 from os import environ
-from Flask_Capstone import app
+from hmda_data_app import app
 
 if __name__ == '__main__':
     HOST = "0.0.0.0"

@@ -5,7 +5,7 @@ Routes and views for the flask application.
 
 from datetime import datetime
 from flask import make_response, redirect, render_template, render_template_string, request, session, url_for
-from Flask_Capstone import app
+from hmda_data_app import app
 
 import pandas as pd
 import os
