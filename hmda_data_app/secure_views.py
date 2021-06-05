@@ -5,15 +5,16 @@ Routes and views for the flask application.
 
 from datetime import datetime
 from flask import make_response, redirect, render_template, render_template_string, request, session, url_for
-from hmda_data_app import app
 
 import pandas as pd
 import os
 import pyargon2
 from hmac import compare_digest as compare_hash
 import pickle
-from . import plot_module
-from . import ad_hoc
+
+from hmda_data_app import plot_module
+from hmda_data_app import ad_hoc
+from hmda_data_app import app
 
 # Reads the pickle containing the data for the application
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
